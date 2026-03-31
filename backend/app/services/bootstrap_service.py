@@ -8,6 +8,12 @@ from app.repositories.user_repository import UserRepository
 
 DEFAULT_PERMISSIONS = {
     "audit:read": "Listar eventos de auditoria.",
+    "companies:read": "Listar empresas.",
+    "companies:write": "Criar e gerenciar empresas.",
+    "contacts:read": "Listar contatos.",
+    "contacts:write": "Criar e gerenciar contatos.",
+    "leads:read": "Listar leads.",
+    "leads:write": "Criar e gerenciar leads.",
     "users:read": "Listar usuarios.",
     "users:write": "Criar e gerenciar usuarios.",
     "roles:read": "Listar papeis.",

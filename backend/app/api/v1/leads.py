@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import get_current_user_email
+from app.api.deps import get_current_user_email, require_permission
 from app.core.database import SessionLocal
 from app.schemas.lead import LeadCreateRequest, LeadResponse, LeadUpdateRequest
 from app.services.audit_service import AuditService
@@ -12,25 +12,25 @@ router = APIRouter()
 def serialize_lead(lead) -> LeadResponse:
     return LeadResponse(
         id=lead.id,
-        name=lead.name,
-        status=lead.status,
-        source=lead.source,
-        summary=lead.summary,
-        notes=lead.notes,
         company_id=lead.company_id,
+        company_name=lead.company.legal_name if lead.company else None,
         contact_id=lead.contact_id,
+        contact_name=lead.contact.full_name if lead.contact else None,
+        title=lead.title,
+        description=lead.description,
+        source=lead.source,
+        status=lead.status,
         created_at=lead.created_at,
-        updated_at=lead.updated_at,
     )
 
 
-@router.get("/leads", response_model=list[LeadResponse])
-def list_leads(current_user_email: str = Depends(get_current_user_email)) -> list[LeadResponse]:
+@router.get("/leads", response_model=list[LeadResponse], dependencies=[Depends(require_permission("leads:read"))])
+def list_leads() -> list[LeadResponse]:
     with SessionLocal() as db:
         return [serialize_lead(lead) for lead in LeadService(db).list_leads()]
 
 
-@router.post("/leads", response_model=LeadResponse)
+@router.post("/leads", response_model=LeadResponse, dependencies=[Depends(require_permission("leads:write"))])
 def create_lead(
     payload: LeadCreateRequest,
     request: Request,
@@ -46,17 +46,12 @@ def create_lead(
             target_id=str(lead.id),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={
-                "name": lead.name,
-                "status": lead.status,
-                "company_id": lead.company_id,
-                "contact_id": lead.contact_id,
-            },
+            details={"title": lead.title, "company_id": lead.company_id, "contact_id": lead.contact_id, "status": lead.status},
         )
         return serialize_lead(lead)
 
 
-@router.patch("/leads/{lead_id}", response_model=LeadResponse)
+@router.patch("/leads/{lead_id}", response_model=LeadResponse, dependencies=[Depends(require_permission("leads:write"))])
 def update_lead(
     lead_id: int,
     payload: LeadUpdateRequest,
@@ -73,11 +68,6 @@ def update_lead(
             target_id=str(lead.id),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={
-                "name": lead.name,
-                "status": lead.status,
-                "company_id": lead.company_id,
-                "contact_id": lead.contact_id,
-            },
+            details={"title": lead.title, "company_id": lead.company_id, "contact_id": lead.contact_id, "status": lead.status},
         )
         return serialize_lead(lead)

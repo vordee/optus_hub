@@ -1,41 +1,35 @@
-from __future__ import annotations
-
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
-LeadStatus = Literal["new", "qualified", "won", "lost"]
-
 
 class LeadCreateRequest(BaseModel):
-    name: str
-    status: LeadStatus = "new"
-    source: Optional[str] = None
-    summary: Optional[str] = None
-    notes: Optional[str] = None
     company_id: Optional[int] = None
     contact_id: Optional[int] = None
+    title: str
+    description: Optional[str] = None
+    source: Optional[str] = None
+    status: str = "new"
 
 
 class LeadUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    status: Optional[LeadStatus] = None
-    source: Optional[str] = None
-    summary: Optional[str] = None
-    notes: Optional[str] = None
     company_id: Optional[int] = None
     contact_id: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    source: Optional[str] = None
+    status: Optional[str] = None
 
 
 class LeadResponse(BaseModel):
     id: int
-    name: str
-    status: LeadStatus
-    source: Optional[str]
-    summary: Optional[str]
-    notes: Optional[str]
     company_id: Optional[int]
+    company_name: Optional[str]
     contact_id: Optional[int]
+    contact_name: Optional[str]
+    title: str
+    description: Optional[str]
+    source: Optional[str]
+    status: str
     created_at: datetime
-    updated_at: datetime

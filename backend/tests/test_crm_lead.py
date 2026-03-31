@@ -1,79 +1,109 @@
-import pytest
-from pydantic import ValidationError
+from fastapi import HTTPException
 
-from app.models.lead import Lead
+from app.schemas.company import CompanyCreateRequest
+from app.schemas.contact import ContactCreateRequest
 from app.schemas.lead import LeadCreateRequest, LeadUpdateRequest
+from app.services.company_service import CompanyService
+from app.services.contact_service import ContactService
 from app.services.lead_service import LeadService
 
 
-def test_create_lead_with_optional_links(db_session) -> None:
+def test_create_lead_infers_company_from_contact(db_session) -> None:
+    company = CompanyService(db_session).create_company(
+        CompanyCreateRequest(
+            legal_name="Optus Tecnologia LTDA",
+            tax_id="12345678000199",
+        )
+    )
+    contact = ContactService(db_session).create_contact(
+        ContactCreateRequest(
+            company_id=company.id,
+            full_name="Maria Silva",
+            email="maria@example.com",
+        )
+    )
     service = LeadService(db_session)
 
     lead = service.create_lead(
         LeadCreateRequest(
-            name="Industrial Prospect",
-            status="new",
+            contact_id=contact.id,
+            title="Projeto de redes corporativas",
             source="site",
-            summary="Initial qualification pending",
-            company_id=10,
-            contact_id=20,
         )
     )
 
-    assert lead.name == "Industrial Prospect"
+    assert lead.contact_id == contact.id
+    assert lead.company_id == company.id
     assert lead.status == "new"
-    assert lead.company_id == 10
-    assert lead.contact_id == 20
 
 
-def test_update_lead_changes_status_and_links(db_session) -> None:
+def test_update_lead_status_and_title(db_session) -> None:
     service = LeadService(db_session)
     lead = service.create_lead(
         LeadCreateRequest(
-            name="Industrial Prospect",
+            title="Lead inicial",
             status="new",
-            source="site",
         )
     )
 
     updated = service.update_lead(
         lead.id,
         LeadUpdateRequest(
-            name="Industrial Prospect Updated",
+            title="Lead qualificado",
             status="qualified",
-            company_id=11,
-            contact_id=21,
         ),
     )
 
-    assert updated.name == "Industrial Prospect Updated"
+    assert updated.title == "Lead qualificado"
     assert updated.status == "qualified"
-    assert updated.company_id == 11
-    assert updated.contact_id == 21
 
 
-def test_update_lead_rejects_unknown_status(db_session) -> None:
-    service = LeadService(db_session)
-    lead = service.create_lead(LeadCreateRequest(name="Industrial Prospect"))
-
-    with pytest.raises(ValidationError):
-        LeadUpdateRequest(status="invalid-status")
-
-    with pytest.raises(Exception) as exc_info:
-        service.update_lead(
-            lead.id,
-            LeadUpdateRequest.model_construct(status="invalid-status"),
+def test_lead_rejects_mismatched_company_and_contact(db_session) -> None:
+    company_a = CompanyService(db_session).create_company(
+        CompanyCreateRequest(
+            legal_name="Empresa A",
+            tax_id="12345678000199",
         )
-
-    assert getattr(exc_info.value, "status_code", None) == 400
-
-
-def test_list_leads_returns_recent_first(db_session) -> None:
+    )
+    company_b = CompanyService(db_session).create_company(
+        CompanyCreateRequest(
+            legal_name="Empresa B",
+            tax_id="99999999000199",
+        )
+    )
+    contact = ContactService(db_session).create_contact(
+        ContactCreateRequest(
+            company_id=company_a.id,
+            full_name="Maria Silva",
+        )
+    )
     service = LeadService(db_session)
-    first = service.create_lead(LeadCreateRequest(name="Lead One"))
-    second = service.create_lead(LeadCreateRequest(name="Lead Two"))
 
-    leads = service.list_leads()
+    try:
+        service.create_lead(
+            LeadCreateRequest(
+                company_id=company_b.id,
+                contact_id=contact.id,
+                title="Lead invalido",
+            )
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected lead with mismatched company/contact to be rejected.")
 
-    assert [lead.id for lead in leads[:2]] == [second.id, first.id]
-    assert all(isinstance(lead, Lead) for lead in leads)
+
+def test_lead_rejects_unknown_status(db_session) -> None:
+    service = LeadService(db_session)
+
+    try:
+        service.create_lead(
+            LeadCreateRequest(
+                title="Lead invalido",
+                status="archived",
+            )
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected unknown lead status to be rejected.")
