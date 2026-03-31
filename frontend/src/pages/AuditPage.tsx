@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatAuditStatus } from "../app/labels";
 import type { AuditEventItem } from "../app/types";
@@ -15,7 +16,7 @@ export function AuditPage() {
 
   async function load() {
     try {
-      setItems(await apiRequest<AuditEventItem[]>("/v1/admin/audit-events?limit=50"));
+      setItems(ensureArray(await apiRequest<AuditEventItem[]>("/v1/admin/audit-events?limit=50")));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar auditoria.");
     }

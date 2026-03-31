@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import type { CompanyItem } from "../app/types";
 
 export function CompaniesPage() {
@@ -20,7 +21,7 @@ export function CompaniesPage() {
 
   async function load() {
     try {
-      setItems(await apiRequest<CompanyItem[]>("/v1/crm/companies"));
+      setItems(ensureArray(await apiRequest<CompanyItem[]>("/v1/crm/companies")));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar empresas.");
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError, login } from "./api";
+import { ensureArray } from "./arrays";
 import { clearToken, getStoredToken, storeToken } from "./auth";
 import type { AuthenticatedUser, NavKey } from "./types";
 import { AuditPage } from "../pages/AuditPage";
@@ -101,6 +102,8 @@ export function App() {
     return <LoginScreen onLogin={handleLogin} error={session.error} />;
   }
 
+  const safeRoles = ensureArray(session.user.roles);
+
   return (
     <div className="app-frame">
       <aside className="sidebar">
@@ -154,7 +157,7 @@ export function App() {
             <h2>{activeItem?.label}</h2>
             <p className="topbar-copy">{activeItem?.description}</p>
           </div>
-          <div className="permission-pill">{session.user.roles.join(", ") || "sem papel"}</div>
+          <div className="permission-pill">{safeRoles.join(", ") || "sem papel"}</div>
         </header>
 
         {activeNav === "dashboard" && <DashboardPage />}

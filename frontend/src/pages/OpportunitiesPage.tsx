@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
 import type { LeadItem, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
@@ -54,6 +55,9 @@ export function OpportunitiesPage() {
     lost: items.filter((item) => item.status === "lost").length,
   };
   const selectedListItem = items.find((item) => item.id === selectedId) || null;
+  const safeLeads = ensureArray(leads);
+  const safeNextStatuses = ensureArray(selectedDetail?.next_statuses);
+  const safeHistory = ensureArray(selectedDetail?.history);
 
   useEffect(() => {
     void loadOpportunities();
@@ -69,7 +73,7 @@ export function OpportunitiesPage() {
       const response = await apiRequest<OpportunityListResponse>(
         `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
       );
-      setItems(response.items);
+      setItems(ensureArray(response.items));
       setTotal(response.total);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar oportunidades.");
@@ -79,7 +83,7 @@ export function OpportunitiesPage() {
   async function loadLeads() {
     try {
       const leadItems = await apiRequest<LeadItem[]>("/v1/crm/leads");
-      setLeads(leadItems);
+      setLeads(ensureArray(leadItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads de apoio.");
     }
@@ -365,8 +369,8 @@ export function OpportunitiesPage() {
                 <div className="helper-card">
                   <strong>Próxima ação</strong>
                   <p>
-                    {selectedDetail.next_statuses.length > 0
-                      ? `Avance o negócio para ${formatOpportunityStatus(selectedDetail.next_statuses[0])} quando a negociação estiver pronta.`
+                    {safeNextStatuses.length > 0
+                      ? `Avance o negócio para ${formatOpportunityStatus(safeNextStatuses[0])} quando a negociação estiver pronta.`
                       : "Nenhuma transição adicional disponível para esta oportunidade."}
                   </p>
                 </div>
@@ -386,12 +390,12 @@ export function OpportunitiesPage() {
                 </div>
                 <div className="metric-card">
                   <span>Próximos passos</span>
-                  <strong>{selectedDetail.next_statuses.length}</strong>
+                  <strong>{safeNextStatuses.length}</strong>
                   <small>transições permitidas</small>
                 </div>
                 <div className="metric-card">
                   <span>Histórico</span>
-                  <strong>{selectedDetail.history.length}</strong>
+                  <strong>{safeHistory.length}</strong>
                   <small>mudanças registradas</small>
                 </div>
                 <div className="metric-card">
@@ -489,7 +493,7 @@ export function OpportunitiesPage() {
                   />
                 </label>
                 <div className="form-actions">
-                  {selectedDetail.next_statuses.map((status) => (
+                  {safeNextStatuses.map((status) => (
                     <button
                       key={status}
                       className="ghost-button"
@@ -508,7 +512,7 @@ export function OpportunitiesPage() {
                   <h3>Histórico comercial</h3>
                 </div>
                 <ul className="history-list history-list-timeline">
-                  {selectedDetail.history.map((entry) => (
+                  {safeHistory.map((entry) => (
                     <li key={entry.id}>
                       <strong>
                         {formatOpportunityStatus(entry.from_status || "open")} → {formatOpportunityStatus(entry.to_status)}
@@ -542,7 +546,7 @@ export function OpportunitiesPage() {
                 onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
               >
                 <option value="">Sem lead</option>
-                {leads.map((lead) => (
+                {safeLeads.map((lead) => (
                   <option key={lead.id} value={lead.id}>
                     {lead.title}
                   </option>

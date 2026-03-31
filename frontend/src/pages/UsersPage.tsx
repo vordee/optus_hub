@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import type { RoleItem, UserItem } from "../app/types";
 
 export function UsersPage() {
@@ -28,8 +29,8 @@ export function UsersPage() {
         apiRequest<UserItem[]>("/v1/admin/users"),
         apiRequest<RoleItem[]>("/v1/admin/roles"),
       ]);
-      setItems(users);
-      setRoles(roleItems);
+      setItems(ensureArray(users));
+      setRoles(ensureArray(roleItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar usuários.");
     }
@@ -110,7 +111,7 @@ export function UsersPage() {
                 <tr key={item.id} onClick={() => populateFromItem(item)}>
                   <td>{item.email}</td>
                   <td>{item.full_name}</td>
-                  <td>{item.roles.join(", ") || "-"}</td>
+                  <td>{ensureArray(item.roles).join(", ") || "-"}</td>
                   <td>{item.is_active ? "Ativo" : "Inativo"}</td>
                 </tr>
               ))}
@@ -164,7 +165,7 @@ export function UsersPage() {
                 }))
               }
             >
-              {roles.map((role) => (
+              {ensureArray(roles).map((role) => (
                 <option key={role.id} value={role.name}>
                   {role.name}
                 </option>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
@@ -28,6 +29,8 @@ export function LeadsPage() {
     proposal: items.filter((item) => item.status === "proposal").length,
     won: items.filter((item) => item.status === "won").length,
   };
+  const safeContacts = ensureArray(contacts);
+  const safeHistory = ensureArray(selectedDetail?.history);
 
   useEffect(() => {
     void loadLeads();
@@ -43,7 +46,7 @@ export function LeadsPage() {
       const leadResponse = await apiRequest<LeadListResponse>(
         `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
       );
-      setItems(leadResponse.items);
+      setItems(ensureArray(leadResponse.items));
       setTotal(leadResponse.total);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads.");
@@ -53,7 +56,7 @@ export function LeadsPage() {
   async function loadContacts() {
     try {
       const contactItems = await apiRequest<ContactItem[]>("/v1/crm/contacts");
-      setContacts(contactItems);
+      setContacts(ensureArray(contactItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar contatos.");
     }
@@ -203,7 +206,7 @@ export function LeadsPage() {
               onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}
             >
               <option value="">Sem vínculo</option>
-              {contacts.map((contact) => (
+              {safeContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
                   {contact.full_name}
                 </option>
@@ -294,7 +297,7 @@ export function LeadsPage() {
                 <h3>Histórico do lead</h3>
               </div>
             <ul className="history-list history-list-timeline">
-              {selectedDetail.history.map((entry) => (
+              {safeHistory.map((entry) => (
                 <li key={entry.id}>
                   <strong>{formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}</strong>
                   <span>{entry.note || entry.changed_by_email || "-"}</span>

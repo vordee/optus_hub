@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import type { CompanyItem, ContactItem } from "../app/types";
 
 export function ContactsPage() {
@@ -27,8 +28,8 @@ export function ContactsPage() {
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
         apiRequest<CompanyItem[]>("/v1/crm/companies"),
       ]);
-      setItems(contacts);
-      setCompanies(companyItems);
+      setItems(ensureArray(contacts));
+      setCompanies(ensureArray(companyItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar contatos.");
     }

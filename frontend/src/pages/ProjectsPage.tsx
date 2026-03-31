@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import {
   formatOpportunityStatus,
@@ -28,10 +29,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
   month: "2-digit",
   year: "numeric",
 });
-
-function ensureArray<T>(value: T[] | null | undefined): T[] {
-  return Array.isArray(value) ? value : [];
-}
 
 function formatDateOnly(value: string | null) {
   if (!value) {
@@ -123,10 +120,12 @@ export function ProjectsPage() {
     done: safeTasks.filter((task) => task.status === "done").length,
     overdue: safeTasks.filter(isTaskOverdue).length,
   };
+  const safePhases = ensureArray(selectedDetail?.phases);
+  const safeProjectHistory = ensureArray(selectedDetail?.history);
   const phaseStats = selectedDetail
     ? {
-        total: selectedDetail.phases.length,
-        completed: selectedDetail.phases.filter(
+        total: safePhases.length,
+        completed: safePhases.filter(
           (phase) => phase.status === "completed" || phase.completed_at !== null,
         ).length,
       }
@@ -505,10 +504,10 @@ export function ProjectsPage() {
               </div>
 
               <div className="detail-meta">
-                <span>{selectedDetail.phases.length} fase(s)</span>
+                <span>{safePhases.length} fase(s)</span>
                 <span>{taskStats.total} tarefa(s)</span>
                 <span>{unassignedTasks.length} sem fase</span>
-                <span>{selectedDetail.history.length} evento(s) de histórico</span>
+                <span>{safeProjectHistory.length} evento(s) de histórico</span>
               </div>
 
               {projectView === "visao" && (
@@ -539,7 +538,7 @@ export function ProjectsPage() {
                       <div className="helper-card">
                         <strong>Próximo foco</strong>
                         <p>
-                          {selectedDetail.phases.find((phase) => phase.status === "active")?.name ||
+                          {safePhases.find((phase) => phase.status === "active")?.name ||
                             "Ative a próxima fase para orientar a execução."}
                         </p>
                       </div>
@@ -555,7 +554,7 @@ export function ProjectsPage() {
                     <h3>Mapa operacional</h3>
                   </div>
                   <div className="phase-grid">
-                    {selectedDetail.phases.map((phase) => (
+                    {safePhases.map((phase) => (
                       <PhaseCard key={phase.id} phase={phase} tasks={tasksByPhaseId.get(phase.id) || []} />
                     ))}
                     <article className="phase-card phase-card-backlog">
@@ -611,7 +610,7 @@ export function ProjectsPage() {
                           onChange={(event) => setTaskForm((current) => ({ ...current, project_phase_id: event.target.value }))}
                         >
                           <option value="">Sem fase vinculada</option>
-                          {selectedDetail.phases.map((phase) => (
+                          {safePhases.map((phase) => (
                             <option key={phase.id} value={phase.id}>
                               {phase.name}
                             </option>
@@ -690,7 +689,7 @@ export function ProjectsPage() {
                     <h3>Movimentações registradas</h3>
                   </div>
                   <ul className="history-list history-list-timeline">
-                    {selectedDetail.history.map((entry) => (
+                    {safeProjectHistory.map((entry) => (
                       <li key={entry.id}>
                         <strong>
                           {formatProjectStatus(entry.from_status || "planned")} → {formatProjectStatus(entry.to_status)}

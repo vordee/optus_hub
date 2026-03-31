@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
+import { ensureArray } from "../app/arrays";
 import type { PermissionItem, RoleItem } from "../app/types";
 
 export function RolesPage() {
@@ -25,8 +26,8 @@ export function RolesPage() {
         apiRequest<RoleItem[]>("/v1/admin/roles"),
         apiRequest<PermissionItem[]>("/v1/admin/permissions"),
       ]);
-      setItems(roles);
-      setPermissions(permissionItems);
+      setItems(ensureArray(roles));
+      setPermissions(ensureArray(permissionItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar papéis.");
     }
@@ -89,11 +90,11 @@ export function RolesPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {ensureArray(items).map((item) => (
                 <tr key={item.id} onClick={() => populateFromItem(item)}>
                   <td>{item.name}</td>
                   <td>{item.description}</td>
-                  <td>{item.permissions.join(", ")}</td>
+                  <td>{ensureArray(item.permissions).join(", ")}</td>
                 </tr>
               ))}
             </tbody>
@@ -137,7 +138,7 @@ export function RolesPage() {
                 }))
               }
             >
-              {permissions.map((permission) => (
+              {ensureArray(permissions).map((permission) => (
                 <option key={permission.code} value={permission.code}>
                   {permission.code}
                 </option>
