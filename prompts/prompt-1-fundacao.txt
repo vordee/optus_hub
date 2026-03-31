@@ -1,0 +1,14 @@
+Objetivo:
+Criar a fundacao tecnica do Optus Hub.
+
+Escopo:
+- bootstrap do backend FastAPI
+- configuracao base
+- conexao com PostgreSQL
+- estrutura inicial de autenticacao
+- observabilidade minima
+
+Regras:
+- nao implementar funcionalidades de negocio fora do escopo
+- manter seguranca por padrao
+- criar testes basicos do bootstrap

@@ -1,0 +1,1 @@
+"""Base integration package placeholder."""

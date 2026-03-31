@@ -1,0 +1,13 @@
+Objetivo:
+Definir e implementar o motor inicial de workflow.
+
+Escopo:
+- estados
+- transicoes
+- aprovacoes
+- historico
+
+Regras:
+- transicoes controladas no backend
+- logs e auditoria obrigatorios
+- side effects desacoplados

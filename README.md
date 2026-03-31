@@ -1,8 +1,19 @@
-# Projetos Flow
+# Optus Hub
 
-Sistema web corporativo para gestão ponta a ponta do processo comercial, técnico, operacional e financeiro, baseado no POP - Processo de Projetos.
+Sistema web corporativo para gestão ponta a ponta do processo comercial, técnico, operacional e financeiro, baseado no POP.
 
-## Objetivo
+## Status
+
+Este repositório está em fase de fundação. A estrutura inicial foi materializada para servir de base de implementação, mas os módulos ainda não estão codificados.
+
+O objetivo desta etapa é deixar claro:
+
+- o que já existe no Git
+- como o monorepo está organizado
+- quais decisões arquiteturais já foram assumidas
+- onde a implementação deve começar
+
+## Objetivo do produto
 
 Centralizar o fluxo completo da empresa em um único sistema, com:
 
@@ -11,20 +22,49 @@ Centralizar o fluxo completo da empresa em um único sistema, com:
 - criação automática de projeto após fechamento comercial
 - trilha de auditoria
 - segurança por padrão
-- arquitetura preparada para integração com Bling e Diário de Obra
+- integrações desacopladas
 - execução em Linux sem Docker
 
-## Premissas
+## Stack prevista
 
 - Backend: FastAPI
 - Frontend: React + Vite
 - Banco: PostgreSQL
-- Cache/Filas: Redis
-- Reverse Proxy: Nginx
-- Execução de serviços: systemd
+- Cache e filas: Redis
+- Reverse proxy: Nginx
+- Serviços: systemd
 - Deploy: Linux sem Docker
 
-## Módulos planejados
+## Fluxo principal
+
+Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta -> Aprovação -> Fechamento -> Projeto -> Execução -> Testes -> Aceite -> Entrega documental -> Faturamento -> Pós-venda
+
+## Estrutura do monorepo
+
+- `backend/`: API, domínio, segurança, integrações e jobs
+- `frontend/`: interface web
+- `deploy/`: nginx, systemd, scripts operacionais e hardening
+- `docs/`: documentação técnica, funcional e operacional
+- `prompts/`: prompts de trabalho para bootstrap das próximas fases
+
+## Organização arquitetural
+
+O backend foi separado em camadas para facilitar o bootstrap:
+
+- `api/`: rotas, dependências e versionamento da API
+- `core/`: configuração, banco, segurança transversal, exceções e logging
+- `models/`: modelos de persistência
+- `schemas/`: contratos de entrada e saída
+- `repositories/`: acesso a dados
+- `services/`: regras de negócio
+- `security/`: RBAC e políticas de autorização
+- `workflows/`: motor e definições de fluxo
+- `integrations/`: conectores externos desacoplados
+- `jobs/`: tarefas assíncronas e processamento de fila
+
+Essa organização é transitória e deve evoluir para uma estrutura mais orientada a domínio conforme os módulos ganharem comportamento real.
+
+## Módulos previstos
 
 - Autenticação e segurança
 - Usuários, perfis e permissões
@@ -37,30 +77,10 @@ Centralizar o fluxo completo da empresa em um único sistema, com:
 - Integrações
 - Indicadores
 
-## Fluxo principal
-
-Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta/POC -> Aprovação -> Fechamento -> Projeto -> Execução -> Testes -> Aceite -> Entrega documental -> Faturamento -> Pós-venda
-
-## Estrutura do monorepo
-
-- `backend/`: API principal
-- `frontend/`: interface web
-- `deploy/`: arquivos de deploy, nginx e systemd
-- `docs/`: documentação técnica e funcional
-
-## Princípios técnicos
-
-- segurança por padrão
-- menor privilégio
-- auditoria obrigatória
-- integrações desacopladas
-- regras de negócio no backend
-- API externa nunca controla o fluxo principal
-- nenhuma etapa crítica avança sem validação
-
-## Roadmap inicial
+## Prioridade de implementação
 
 ### Fase 1
+
 - autenticação
 - usuários
 - perfis
@@ -72,6 +92,7 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta/POC -> Aprovação -> 
 - oportunidades
 
 ### Fase 2
+
 - motor de workflow
 - transições
 - aprovações
@@ -79,6 +100,7 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta/POC -> Aprovação -> 
 - histórico
 
 ### Fase 3
+
 - criação automática de projetos
 - fases
 - tarefas
@@ -87,20 +109,12 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta/POC -> Aprovação -> 
 - aceite
 
 ### Fase 4
+
 - integração com Bling
 - integração com Diário de Obra
 - fila de sincronização
 - retries
 - logs de integração
-
-## Requisitos de execução local
-
-- Python 3.12+
-- Node.js 22+
-- PostgreSQL 15+
-- Redis 7+
-- Nginx
-- Linux com systemd
 
 ## Convenções
 
@@ -109,33 +123,13 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta/POC -> Aprovação -> 
 - testes automatizados obrigatórios
 - logs estruturados
 - commits pequenos e objetivos
+- regras de negócio concentradas no backend
+- integrações externas nunca controlam o fluxo principal
 
-## Segurança
+## Leitura inicial recomendada
 
-- autenticação segura
-- RBAC por perfil
-- MFA para perfis críticos
-- logs de login e alteração
-- validação server-side
-- upload controlado
-- tokens de integração armazenados no servidor
-- banco não exposto publicamente
-
-## Integrações planejadas
-
-### Bling
-- cadastro/atualização de cliente
-- sincronização comercial/financeira
-- eventos de faturamento
-- atualização de status financeiro
-
-### Diário de Obra
-- criação de obra/projeto
-- sincronização de etapas
-- avanço físico
-- ocorrências
-- evidências
-
-## Status
-
-Projeto em fase inicial de fundação.
+- `docs/arquitetura/visao-geral.md`
+- `docs/arquitetura/modulos.md`
+- `docs/arquitetura/fluxo-pop.md`
+- `docs/arquitetura/integracoes.md`
+- `prompts/`

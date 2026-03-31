@@ -1,0 +1,13 @@
+Objetivo:
+Implementar o primeiro modulo funcional do CRM.
+
+Escopo:
+- empresas
+- contatos
+- leads
+- oportunidades
+
+Regras:
+- contratos de API claros
+- validacao no backend
+- auditoria de alteracoes relevantes

@@ -1,0 +1,14 @@
+Objetivo:
+Implementar a criacao de projetos apos fechamento comercial.
+
+Escopo:
+- criacao automatica
+- fases
+- tarefas
+- marcos
+- aceite
+
+Regras:
+- respeitar workflow anterior
+- manter rastreabilidade
+- nao acoplar integracoes ao fluxo principal
