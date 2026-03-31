@@ -51,6 +51,9 @@ def test_update_opportunity_status_and_amount(db_session) -> None:
     assert updated.status == "proposal"
     assert updated.title == "Oportunidade proposta"
     assert float(updated.amount) == 1500
+    history = service.list_status_history(opportunity.id)
+    assert history[0].from_status == "open"
+    assert history[0].to_status == "proposal"
 
 
 def test_opportunity_rejects_mismatched_lead_and_company(db_session) -> None:
@@ -93,3 +96,15 @@ def test_opportunity_rejects_unknown_status(db_session) -> None:
         assert exc.status_code == 400
     else:
         raise AssertionError("Expected unknown opportunity status to be rejected.")
+
+
+def test_list_opportunities_filters_and_paginates(db_session) -> None:
+    service = OpportunityService(db_session)
+    service.create_opportunity(OpportunityCreateRequest(title="Primeira oportunidade", status="open"))
+    service.create_opportunity(OpportunityCreateRequest(title="Segunda oportunidade", status="proposal"))
+
+    items, total = service.list_opportunities(query="segunda", status="proposal", page=1, page_size=10)
+
+    assert total == 1
+    assert len(items) == 1
+    assert items[0].title == "Segunda oportunidade"

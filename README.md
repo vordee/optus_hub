@@ -49,7 +49,7 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta -> Aprovação -> Fech
 
 ## Runtime minimo atual
 
-- Python 3.9+
+- Python 3.11+
 - PostgreSQL 15+
 - Redis 7+
 - Node.js 22+
@@ -140,3 +140,12 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 - `docs/arquitetura/fluxo-pop.md`
 - `docs/arquitetura/integracoes.md`
 - `prompts/`
+
+## Operação com agents
+
+O repositório também materializa uma estrutura de agentes para execução paralela com ownership claro:
+
+- `AGENTS.md`
+- `.agents/README.md`
+- `.agents/roles/`
+- `.agents/workflows/`

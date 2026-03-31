@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
-import type { ContactItem, LeadItem } from "../app/types";
+import { formatDateTime } from "../app/format";
+import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
 
 const LEAD_STATUSES = ["new", "qualified", "diagnosis", "proposal", "won", "lost"];
 
@@ -9,7 +10,12 @@ export function LeadsPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<LeadDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     contact_id: "",
     title: "",
@@ -20,15 +26,18 @@ export function LeadsPage() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [page, query, filterStatus]);
 
   async function load() {
     try {
-      const [leads, contactItems] = await Promise.all([
-        apiRequest<LeadItem[]>("/v1/crm/leads"),
+      const [leadResponse, contactItems] = await Promise.all([
+        apiRequest<LeadListResponse>(
+          `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+        ),
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
       ]);
-      setItems(leads);
+      setItems(leadResponse.items);
+      setTotal(leadResponse.total);
       setContacts(contactItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads.");
@@ -44,6 +53,15 @@ export function LeadsPage() {
       source: item.source || "",
       status: item.status,
     });
+    void loadDetail(item.id);
+  }
+
+  async function loadDetail(leadId: number) {
+    try {
+      setSelectedDetail(await apiRequest<LeadDetailItem>(`/v1/crm/leads/${leadId}`));
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do lead.");
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -70,6 +88,7 @@ export function LeadsPage() {
         });
       }
       setSelectedId(null);
+      setSelectedDetail(null);
       setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
       await load();
     } catch (submitError) {
@@ -85,6 +104,17 @@ export function LeadsPage() {
           <h3>Leads</h3>
         </div>
         {error && <div className="inline-error">{error}</div>}
+        <div className="toolbar">
+          <input placeholder="Buscar por título ou origem" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} />
+          <select value={filterStatus} onChange={(event) => { setPage(1); setFilterStatus(event.target.value); }}>
+            <option value="">Todos os status</option>
+            {LEAD_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
@@ -106,6 +136,14 @@ export function LeadsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="pager">
+          <span>{total} registros</span>
+          <div className="pager-actions">
+            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
+            <span>Página {page}</span>
+            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+          </div>
         </div>
       </article>
 
@@ -163,6 +201,24 @@ export function LeadsPage() {
             {selectedId === null ? "Criar lead" : "Atualizar lead"}
           </button>
         </form>
+        {selectedDetail && (
+          <div className="detail-panel">
+            <div className="section-heading">
+              <span className="eyebrow">Detalhe</span>
+              <h3>{selectedDetail.title}</h3>
+            </div>
+            <p>{selectedDetail.description || "Sem descrição."}</p>
+            <ul className="history-list">
+              {selectedDetail.history.map((entry) => (
+                <li key={entry.id}>
+                  <strong>{entry.from_status || "inicial"} → {entry.to_status}</strong>
+                  <span>{entry.changed_by_email || "-"}</span>
+                  <small>{formatDateTime(entry.changed_at)}</small>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </article>
     </section>
   );

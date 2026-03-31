@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import get_current_user_email, require_permission
 from app.core.database import SessionLocal
-from app.schemas.opportunity import OpportunityCreateRequest, OpportunityResponse, OpportunityUpdateRequest
+from app.schemas.opportunity import (
+    OpportunityCreateRequest,
+    OpportunityDetailResponse,
+    OpportunityListResponse,
+    OpportunityResponse,
+    OpportunityUpdateRequest,
+)
+from app.schemas.status_history import StatusHistoryResponse
 from app.services.audit_service import AuditService
 from app.services.opportunity_service import OpportunityService
 
@@ -25,14 +32,48 @@ def serialize_opportunity(opportunity) -> OpportunityResponse:
     )
 
 
+def serialize_status_history(item) -> StatusHistoryResponse:
+    return StatusHistoryResponse(
+        id=item.id,
+        entity_type=item.entity_type,
+        entity_id=item.entity_id,
+        from_status=item.from_status,
+        to_status=item.to_status,
+        note=item.note,
+        changed_by_email=item.changed_by_email,
+        changed_at=item.changed_at,
+    )
+
+
 @router.get(
     "/opportunities",
-    response_model=list[OpportunityResponse],
+    response_model=OpportunityListResponse,
     dependencies=[Depends(require_permission("opportunities:read"))],
 )
-def list_opportunities() -> list[OpportunityResponse]:
+def list_opportunities(
+    query: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+) -> OpportunityListResponse:
     with SessionLocal() as db:
-        return [serialize_opportunity(opportunity) for opportunity in OpportunityService(db).list_opportunities()]
+        items, total = OpportunityService(db).list_opportunities(query=query, status=status, page=page, page_size=page_size)
+        return OpportunityListResponse(items=[serialize_opportunity(opportunity) for opportunity in items], total=total, page=page, page_size=page_size)
+
+
+@router.get(
+    "/opportunities/{opportunity_id}",
+    response_model=OpportunityDetailResponse,
+    dependencies=[Depends(require_permission("opportunities:read"))],
+)
+def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
+    with SessionLocal() as db:
+        service = OpportunityService(db)
+        opportunity = service.get_opportunity(opportunity_id)
+        return OpportunityDetailResponse(
+            **serialize_opportunity(opportunity).model_dump(),
+            history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id)],
+        )
 
 
 @router.post(
@@ -46,7 +87,7 @@ def create_opportunity(
     current_user_email: str = Depends(get_current_user_email),
 ) -> OpportunityResponse:
     with SessionLocal() as db:
-        opportunity = OpportunityService(db).create_opportunity(payload)
+        opportunity = OpportunityService(db).create_opportunity(payload, changed_by_email=current_user_email)
         AuditService(db).record_event(
             action="crm.opportunity.create",
             status="success",
@@ -79,7 +120,11 @@ def update_opportunity(
     current_user_email: str = Depends(get_current_user_email),
 ) -> OpportunityResponse:
     with SessionLocal() as db:
-        opportunity = OpportunityService(db).update_opportunity(opportunity_id, payload)
+        opportunity = OpportunityService(db).update_opportunity(
+            opportunity_id,
+            payload,
+            changed_by_email=current_user_email,
+        )
         AuditService(db).record_event(
             action="crm.opportunity.update",
             status="success",

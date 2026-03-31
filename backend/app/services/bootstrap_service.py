@@ -16,6 +16,8 @@ DEFAULT_PERMISSIONS = {
     "leads:write": "Criar e gerenciar leads.",
     "opportunities:read": "Listar oportunidades.",
     "opportunities:write": "Criar e gerenciar oportunidades.",
+    "projects:read": "Listar projetos.",
+    "projects:write": "Criar e gerenciar projetos.",
     "users:read": "Listar usuarios.",
     "users:write": "Criar e gerenciar usuarios.",
     "roles:read": "Listar papeis.",

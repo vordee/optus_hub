@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
-import { formatCurrency } from "../app/format";
-import type { LeadItem, OpportunityItem } from "../app/types";
+import { formatCurrency, formatDateTime } from "../app/format";
+import type { LeadItem, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
 
 const OPPORTUNITY_STATUSES = ["open", "proposal", "won", "lost"];
 
@@ -10,7 +10,12 @@ export function OpportunitiesPage() {
   const [items, setItems] = useState<OpportunityItem[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<OpportunityDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     lead_id: "",
     title: "",
@@ -21,15 +26,18 @@ export function OpportunitiesPage() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [page, query, filterStatus]);
 
   async function load() {
     try {
-      const [opportunities, leadItems] = await Promise.all([
-        apiRequest<OpportunityItem[]>("/v1/crm/opportunities"),
+      const [response, leadItems] = await Promise.all([
+        apiRequest<OpportunityListResponse>(
+          `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+        ),
         apiRequest<LeadItem[]>("/v1/crm/leads"),
       ]);
-      setItems(opportunities);
+      setItems(response.items);
+      setTotal(response.total);
       setLeads(leadItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar oportunidades.");
@@ -45,6 +53,15 @@ export function OpportunitiesPage() {
       status: item.status,
       amount: item.amount !== null ? String(item.amount) : "",
     });
+    void loadDetail(item.id);
+  }
+
+  async function loadDetail(opportunityId: number) {
+    try {
+      setSelectedDetail(await apiRequest<OpportunityDetailItem>(`/v1/crm/opportunities/${opportunityId}`));
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe da oportunidade.");
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -71,6 +88,7 @@ export function OpportunitiesPage() {
         });
       }
       setSelectedId(null);
+      setSelectedDetail(null);
       setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
       await load();
     } catch (submitError) {
@@ -86,6 +104,17 @@ export function OpportunitiesPage() {
           <h3>Oportunidades</h3>
         </div>
         {error && <div className="inline-error">{error}</div>}
+        <div className="toolbar">
+          <input placeholder="Buscar por título" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} />
+          <select value={filterStatus} onChange={(event) => { setPage(1); setFilterStatus(event.target.value); }}>
+            <option value="">Todos os status</option>
+            {OPPORTUNITY_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
@@ -107,6 +136,14 @@ export function OpportunitiesPage() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="pager">
+          <span>{total} registros</span>
+          <div className="pager-actions">
+            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
+            <span>Página {page}</span>
+            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+          </div>
         </div>
       </article>
 
@@ -165,6 +202,25 @@ export function OpportunitiesPage() {
             {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
           </button>
         </form>
+        {selectedDetail && (
+          <div className="detail-panel">
+            <div className="section-heading">
+              <span className="eyebrow">Detalhe</span>
+              <h3>{selectedDetail.title}</h3>
+            </div>
+            <p>{selectedDetail.description || "Sem descrição."}</p>
+            <p><strong>Valor:</strong> {formatCurrency(selectedDetail.amount)}</p>
+            <ul className="history-list">
+              {selectedDetail.history.map((entry) => (
+                <li key={entry.id}>
+                  <strong>{entry.from_status || "inicial"} → {entry.to_status}</strong>
+                  <span>{entry.changed_by_email || "-"}</span>
+                  <small>{formatDateTime(entry.changed_at)}</small>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </article>
     </section>
   );

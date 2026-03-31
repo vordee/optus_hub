@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.status_history import StatusHistoryResponse
+
 
 class OpportunityCreateRequest(BaseModel):
     lead_id: Optional[int] = None
@@ -36,3 +38,14 @@ class OpportunityResponse(BaseModel):
     status: str
     amount: Optional[float]
     created_at: datetime
+
+
+class OpportunityListResponse(BaseModel):
+    items: list[OpportunityResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class OpportunityDetailResponse(OpportunityResponse):
+    history: list[StatusHistoryResponse]

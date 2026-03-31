@@ -8,6 +8,7 @@ from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.opportunity_repository import OpportunityRepository
+from app.repositories.status_history_repository import StatusHistoryRepository
 from app.schemas.opportunity import OpportunityCreateRequest, OpportunityUpdateRequest
 
 OPPORTUNITY_STATUSES = {"open", "proposal", "won", "lost"}
@@ -17,31 +18,61 @@ class OpportunityService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.opportunity_repository = OpportunityRepository(db)
+        self.status_history_repository = StatusHistoryRepository(db)
         self.lead_repository = LeadRepository(db)
         self.company_repository = CompanyRepository(db)
         self.contact_repository = ContactRepository(db)
 
-    def list_opportunities(self) -> list[Opportunity]:
-        return self.opportunity_repository.list_all()
+    def list_opportunities(
+        self,
+        *,
+        query: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Opportunity], int]:
+        items = self.opportunity_repository.list_filtered(query=query, status=status, page=page, page_size=page_size)
+        total = self.opportunity_repository.count_filtered(query=query, status=status)
+        return items, total
 
-    def create_opportunity(self, payload: OpportunityCreateRequest) -> Opportunity:
+    def get_opportunity(self, opportunity_id: int) -> Opportunity:
+        opportunity = self.opportunity_repository.get_by_id(opportunity_id)
+        if opportunity is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found.")
+        return opportunity
+
+    def create_opportunity(self, payload: OpportunityCreateRequest, *, changed_by_email: str | None = None) -> Opportunity:
         lead_id, company_id, contact_id = self._resolve_relationships(
             payload.lead_id,
             payload.company_id,
             payload.contact_id,
         )
+        validated_status = self._validate_status(payload.status)
         opportunity = self.opportunity_repository.create(
             lead_id=lead_id,
             company_id=company_id,
             contact_id=contact_id,
             title=payload.title.strip(),
             description=self._normalize_optional(payload.description),
-            status=self._validate_status(payload.status),
+            status=validated_status,
             amount=payload.amount,
+        )
+        self.status_history_repository.create(
+            entity_type="opportunity",
+            entity_id=opportunity.id,
+            from_status=None,
+            to_status=validated_status,
+            changed_by_email=changed_by_email,
         )
         return self.opportunity_repository.save(opportunity)
 
-    def update_opportunity(self, opportunity_id: int, payload: OpportunityUpdateRequest) -> Opportunity:
+    def update_opportunity(
+        self,
+        opportunity_id: int,
+        payload: OpportunityUpdateRequest,
+        *,
+        changed_by_email: str | None = None,
+    ) -> Opportunity:
         opportunity = self.opportunity_repository.get_by_id(opportunity_id)
         if opportunity is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found.")
@@ -61,11 +92,28 @@ class OpportunityService:
         if payload.description is not None:
             opportunity.description = self._normalize_optional(payload.description)
         if payload.status is not None:
-            opportunity.status = self._validate_status(payload.status)
+            next_status = self._validate_status(payload.status)
+            if next_status != opportunity.status:
+                previous_status = opportunity.status
+                opportunity.status = next_status
+                self.status_history_repository.create(
+                    entity_type="opportunity",
+                    entity_id=opportunity.id,
+                    from_status=previous_status,
+                    to_status=next_status,
+                    changed_by_email=changed_by_email,
+                )
         if payload.amount is not None:
             opportunity.amount = payload.amount
 
         return self.opportunity_repository.save(opportunity)
+
+    def list_status_history(self, opportunity_id: int):
+        self.get_opportunity(opportunity_id)
+        return self.status_history_repository.list_for_entity(
+            entity_type="opportunity",
+            entity_id=opportunity_id,
+        )
 
     def _resolve_relationships(
         self,

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.contact import Contact
     from app.models.lead import Lead
+    from app.models.project import Project
 
 
 class Opportunity(Base):
@@ -29,3 +30,4 @@ class Opportunity(Base):
     lead: Mapped[Optional["Lead"]] = relationship(back_populates="opportunities", lazy="joined")
     company: Mapped[Optional["Company"]] = relationship(back_populates="opportunities", lazy="joined")
     contact: Mapped[Optional["Contact"]] = relationship(back_populates="opportunities", lazy="joined")
+    projects: Mapped[list["Project"]] = relationship(back_populates="opportunity", lazy="selectin")

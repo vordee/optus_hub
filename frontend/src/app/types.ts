@@ -78,6 +78,28 @@ export interface LeadItem {
   created_at: string;
 }
 
+export interface LeadListResponse {
+  items: LeadItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface StatusHistoryItem {
+  id: number;
+  entity_type: string;
+  entity_id: number;
+  from_status: string | null;
+  to_status: string;
+  note: string | null;
+  changed_by_email: string | null;
+  changed_at: string;
+}
+
+export interface LeadDetailItem extends LeadItem {
+  history: StatusHistoryItem[];
+}
+
 export interface OpportunityItem {
   id: number;
   lead_id: number | null;
@@ -92,6 +114,41 @@ export interface OpportunityItem {
   created_at: string;
 }
 
+export interface OpportunityListResponse {
+  items: OpportunityItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface OpportunityDetailItem extends OpportunityItem {
+  history: StatusHistoryItem[];
+}
+
+export interface ProjectItem {
+  id: number;
+  opportunity_id: number | null;
+  company_id: number | null;
+  company_name: string | null;
+  contact_id: number | null;
+  contact_name: string | null;
+  name: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface ProjectListResponse {
+  items: ProjectItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ProjectDetailItem extends ProjectItem {
+  history: StatusHistoryItem[];
+}
+
 export type NavKey =
   | "dashboard"
   | "users"
@@ -100,4 +157,5 @@ export type NavKey =
   | "companies"
   | "contacts"
   | "leads"
-  | "opportunities";
+  | "opportunities"
+  | "projects";

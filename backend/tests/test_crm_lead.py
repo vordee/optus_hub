@@ -56,6 +56,9 @@ def test_update_lead_status_and_title(db_session) -> None:
 
     assert updated.title == "Lead qualificado"
     assert updated.status == "qualified"
+    history = service.list_status_history(lead.id)
+    assert history[0].from_status == "new"
+    assert history[0].to_status == "qualified"
 
 
 def test_lead_rejects_mismatched_company_and_contact(db_session) -> None:
@@ -107,3 +110,15 @@ def test_lead_rejects_unknown_status(db_session) -> None:
         assert exc.status_code == 400
     else:
         raise AssertionError("Expected unknown lead status to be rejected.")
+
+
+def test_list_leads_filters_and_paginates(db_session) -> None:
+    service = LeadService(db_session)
+    service.create_lead(LeadCreateRequest(title="Primeiro lead", status="new"))
+    service.create_lead(LeadCreateRequest(title="Segundo lead", status="qualified"))
+
+    items, total = service.list_leads(query="segundo", status="qualified", page=1, page_size=10)
+
+    assert total == 1
+    assert len(items) == 1
+    assert items[0].title == "Segundo lead"

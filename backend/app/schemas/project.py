@@ -6,43 +6,40 @@ from pydantic import BaseModel
 from app.schemas.status_history import StatusHistoryResponse
 
 
-class LeadCreateRequest(BaseModel):
+class ProjectCreateRequest(BaseModel):
+    opportunity_id: Optional[int] = None
     company_id: Optional[int] = None
     contact_id: Optional[int] = None
-    title: str
+    name: str
+    status: str = "planned"
     description: Optional[str] = None
-    source: Optional[str] = None
-    status: str = "new"
 
 
-class LeadUpdateRequest(BaseModel):
-    company_id: Optional[int] = None
-    contact_id: Optional[int] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    source: Optional[str] = None
+class ProjectUpdateRequest(BaseModel):
+    name: Optional[str] = None
     status: Optional[str] = None
+    description: Optional[str] = None
 
 
-class LeadResponse(BaseModel):
+class ProjectResponse(BaseModel):
     id: int
+    opportunity_id: Optional[int]
     company_id: Optional[int]
     company_name: Optional[str]
     contact_id: Optional[int]
     contact_name: Optional[str]
-    title: str
-    description: Optional[str]
-    source: Optional[str]
+    name: str
     status: str
+    description: Optional[str]
     created_at: datetime
 
 
-class LeadListResponse(BaseModel):
-    items: list[LeadResponse]
+class ProjectListResponse(BaseModel):
+    items: list[ProjectResponse]
     total: int
     page: int
     page_size: int
 
 
-class LeadDetailResponse(LeadResponse):
+class ProjectDetailResponse(ProjectResponse):
     history: list[StatusHistoryResponse]
