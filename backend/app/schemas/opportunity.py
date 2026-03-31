@@ -45,6 +45,12 @@ class OpportunityResponse(BaseModel):
     created_at: datetime
 
 
+class OpportunityProjectSummary(BaseModel):
+    id: int
+    name: str
+    status: str
+
+
 class OpportunityListResponse(BaseModel):
     items: list[OpportunityResponse]
     total: int
@@ -55,3 +61,5 @@ class OpportunityListResponse(BaseModel):
 class OpportunityDetailResponse(OpportunityResponse):
     next_statuses: list[str]
     history: list[StatusHistoryResponse]
+    linked_project: Optional[OpportunityProjectSummary] = None
+    can_open_project: bool = False

@@ -77,6 +77,7 @@ def test_create_project_from_won_opportunity(db_session) -> None:
     phases = ProjectService(db_session).list_phases(project.id)
     assert len(phases) == 6
     assert history[0].changed_by_email == "admin@example.com"
+    assert history[0].note == f"kickoff opened from opportunity {opportunity.id}"
 
 
 def test_create_project_from_non_won_opportunity_rejects(db_session) -> None:
@@ -117,6 +118,25 @@ def test_create_project_rejects_duplicate_opportunity(db_session) -> None:
         assert exc.status_code == 409
     else:
         raise AssertionError("Expected duplicate project for opportunity to be rejected.")
+
+
+def test_get_project_by_opportunity_id_returns_created_project(db_session) -> None:
+    opportunity = OpportunityService(db_session).create_opportunity(
+        OpportunityCreateRequest(title="Oportunidade vencedora", status="won")
+    )
+    service = ProjectService(db_session)
+    created = service.create_project(
+        ProjectCreateRequest(
+            opportunity_id=opportunity.id,
+            name="Projeto vinculado",
+            status="planned",
+        )
+    )
+
+    linked = service.get_by_opportunity_id(opportunity.id)
+
+    assert linked is not None
+    assert linked.id == created.id
 
 
 def test_list_projects_filters_and_paginates(db_session) -> None:

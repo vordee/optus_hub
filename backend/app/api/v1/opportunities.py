@@ -6,13 +6,16 @@ from app.schemas.opportunity import (
     OpportunityCreateRequest,
     OpportunityDetailResponse,
     OpportunityListResponse,
+    OpportunityProjectSummary,
     OpportunityResponse,
     OpportunityTransitionRequest,
     OpportunityUpdateRequest,
 )
+from app.schemas.project import ProjectResponse
 from app.schemas.status_history import StatusHistoryResponse
 from app.services.audit_service import AuditService
 from app.services.opportunity_service import OpportunityService
+from app.services.project_service import ProjectService
 
 router = APIRouter()
 
@@ -46,6 +49,21 @@ def serialize_status_history(item) -> StatusHistoryResponse:
     )
 
 
+def serialize_project(project) -> ProjectResponse:
+    return ProjectResponse(
+        id=project.id,
+        opportunity_id=project.opportunity_id,
+        company_id=project.company_id,
+        company_name=project.company.legal_name if project.company else None,
+        contact_id=project.contact_id,
+        contact_name=project.contact.full_name if project.contact else None,
+        name=project.name,
+        status=project.status,
+        description=project.description,
+        created_at=project.created_at,
+    )
+
+
 @router.get(
     "/opportunities",
     response_model=OpportunityListResponse,
@@ -70,11 +88,23 @@ def list_opportunities(
 def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
     with SessionLocal() as db:
         service = OpportunityService(db)
+        project_service = ProjectService(db)
         opportunity = service.get_opportunity(opportunity_id)
+        linked_project = project_service.get_by_opportunity_id(opportunity_id)
         return OpportunityDetailResponse(
             **serialize_opportunity(opportunity).model_dump(),
             next_statuses=service.list_next_statuses(opportunity_id),
             history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id)],
+            linked_project=(
+                OpportunityProjectSummary(
+                    id=linked_project.id,
+                    name=linked_project.name,
+                    status=linked_project.status,
+                )
+                if linked_project is not None
+                else None
+            ),
+            can_open_project=opportunity.status == "won" and linked_project is None,
         )
 
 
@@ -142,6 +172,38 @@ def transition_opportunity(
             },
         )
         return serialize_opportunity(opportunity)
+
+
+@router.post(
+    "/opportunities/{opportunity_id}/kickoff",
+    response_model=ProjectResponse,
+    dependencies=[Depends(require_permission("projects:write"))],
+)
+def kickoff_opportunity(
+    opportunity_id: int,
+    request: Request,
+    current_user_email: str = Depends(get_current_user_email),
+) -> ProjectResponse:
+    with SessionLocal() as db:
+        project = ProjectService(db).create_from_opportunity(
+            opportunity_id,
+            changed_by_email=current_user_email,
+        )
+        AuditService(db).record_event(
+            action="crm.opportunity.kickoff",
+            status="success",
+            actor_email=current_user_email,
+            target_type="project",
+            target_id=str(project.id),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            details={
+                "opportunity_id": opportunity_id,
+                "project_id": project.id,
+                "project_name": project.name,
+            },
+        )
+        return serialize_project(project)
 
 
 @router.patch(

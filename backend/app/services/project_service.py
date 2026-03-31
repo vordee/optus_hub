@@ -68,6 +68,9 @@ class ProjectService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
         return project
 
+    def get_by_opportunity_id(self, opportunity_id: int) -> Project | None:
+        return self.project_repository.get_by_opportunity_id(opportunity_id)
+
     def create_project(self, payload: ProjectCreateRequest, *, changed_by_email: str | None = None) -> Project:
         opportunity_id, company_id, contact_id = self._resolve_relationships(
             payload.opportunity_id,
@@ -151,7 +154,7 @@ class ProjectService:
             from_status=None,
             to_status="planned",
             changed_by_email=changed_by_email,
-            note=f"created from opportunity {opportunity.id}",
+            note=f"kickoff opened from opportunity {opportunity.id}",
         )
         self._ensure_default_phases(project)
         return self.project_repository.save(project)

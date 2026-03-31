@@ -124,6 +124,12 @@ export interface OpportunityListResponse {
 export interface OpportunityDetailItem extends OpportunityItem {
   next_statuses: string[];
   history: StatusHistoryItem[];
+  linked_project: {
+    id: number;
+    name: string;
+    status: string;
+  } | null;
+  can_open_project: boolean;
 }
 
 export interface ProjectItem {

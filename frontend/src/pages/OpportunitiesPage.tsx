@@ -27,6 +27,7 @@ export function OpportunitiesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [transitionNote, setTransitionNote] = useState("");
+  const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [form, setForm] = useState({
     lead_id: "",
     title: "",
@@ -81,6 +82,26 @@ export function OpportunitiesPage() {
       await loadDetail(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao executar transição da oportunidade.");
+    }
+  }
+
+  async function handleKickoff() {
+    if (selectedId === null) {
+      return;
+    }
+
+    setKickoffSubmitting(true);
+    setError(null);
+    try {
+      await apiRequest(`/v1/crm/opportunities/${selectedId}/kickoff`, {
+        method: "POST",
+      });
+      await load();
+      await loadDetail(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao abrir kickoff da oportunidade.");
+    } finally {
+      setKickoffSubmitting(false);
     }
   }
 
@@ -312,6 +333,44 @@ export function OpportunitiesPage() {
                 <span>Lead</span>
                 <strong>{selectedDetail.lead_id || "-"}</strong>
                 <small>origem do negócio</small>
+              </div>
+            </div>
+            <div className="detail-section">
+              <div className="section-heading">
+                <span className="eyebrow">Kickoff</span>
+                <h3>Ponte para operação</h3>
+              </div>
+              <div className="kickoff-card">
+                {selectedDetail.linked_project ? (
+                  <>
+                    <div>
+                      <strong>{selectedDetail.linked_project.name}</strong>
+                      <p>Projeto já aberto a partir desta oportunidade.</p>
+                    </div>
+                    <div className="detail-meta detail-meta-dense">
+                      <span>Projeto #{selectedDetail.linked_project.id}</span>
+                      <span>Status {selectedDetail.linked_project.status}</span>
+                    </div>
+                  </>
+                ) : selectedDetail.can_open_project ? (
+                  <>
+                    <div>
+                      <strong>Oportunidade pronta para kickoff</strong>
+                      <p>Negócio ganho sem projeto operacional aberto. Use a ação abaixo para iniciar a entrega.</p>
+                    </div>
+                    <button className="primary-button" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
+                      {kickoffSubmitting ? "Abrindo projeto..." : "Abrir projeto"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <strong>Kickoff ainda indisponível</strong>
+                      <p>O projeto operacional só pode ser aberto quando a oportunidade estiver em status ganho.</p>
+                    </div>
+                    <span className="status-pill">Aguardando ganho</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="detail-section">
