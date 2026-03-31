@@ -16,6 +16,7 @@ export function OpportunitiesPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [transitionNote, setTransitionNote] = useState("");
   const [form, setForm] = useState({
     lead_id: "",
     title: "",
@@ -41,6 +42,27 @@ export function OpportunitiesPage() {
       setLeads(leadItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar oportunidades.");
+    }
+  }
+
+  async function handleTransition(toStatus: string) {
+    if (selectedId === null) {
+      return;
+    }
+
+    try {
+      await apiRequest(`/v1/crm/opportunities/${selectedId}/transition`, {
+        method: "POST",
+        body: JSON.stringify({
+          to_status: toStatus,
+          note: transitionNote || null,
+        }),
+      });
+      setTransitionNote("");
+      await load();
+      await loadDetail(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao executar transição da oportunidade.");
     }
   }
 
@@ -210,6 +232,32 @@ export function OpportunitiesPage() {
             </div>
             <p>{selectedDetail.description || "Sem descrição."}</p>
             <p><strong>Valor:</strong> {formatCurrency(selectedDetail.amount)}</p>
+            <div className="detail-section">
+              <div className="section-heading">
+                <span className="eyebrow">Ações</span>
+                <h3>Fluxo comercial guiado</h3>
+              </div>
+              <label className="field">
+                <span>Nota da transição</span>
+                <textarea
+                  value={transitionNote}
+                  onChange={(event) => setTransitionNote(event.target.value)}
+                  placeholder="Motivo do avanço, perda ou retorno de etapa"
+                />
+              </label>
+              <div className="form-actions">
+                {selectedDetail.next_statuses.map((status) => (
+                  <button
+                    key={status}
+                    className="ghost-button"
+                    onClick={() => void handleTransition(status)}
+                    type="button"
+                  >
+                    Ir para {status}
+                  </button>
+                ))}
+              </div>
+            </div>
             <ul className="history-list">
               {selectedDetail.history.map((entry) => (
                 <li key={entry.id}>

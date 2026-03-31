@@ -26,6 +26,11 @@ class OpportunityUpdateRequest(BaseModel):
     amount: Optional[float] = Field(default=None, ge=0)
 
 
+class OpportunityTransitionRequest(BaseModel):
+    to_status: str
+    note: Optional[str] = None
+
+
 class OpportunityResponse(BaseModel):
     id: int
     lead_id: Optional[int]
@@ -48,4 +53,5 @@ class OpportunityListResponse(BaseModel):
 
 
 class OpportunityDetailResponse(OpportunityResponse):
+    next_statuses: list[str]
     history: list[StatusHistoryResponse]

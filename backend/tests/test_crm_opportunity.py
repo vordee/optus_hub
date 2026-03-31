@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from app.schemas.company import CompanyCreateRequest
 from app.schemas.contact import ContactCreateRequest
 from app.schemas.lead import LeadCreateRequest
-from app.schemas.opportunity import OpportunityCreateRequest, OpportunityUpdateRequest
+from app.schemas.opportunity import OpportunityCreateRequest, OpportunityTransitionRequest, OpportunityUpdateRequest
 from app.services.company_service import CompanyService
 from app.services.contact_service import ContactService
 from app.services.lead_service import LeadService
@@ -108,3 +108,56 @@ def test_list_opportunities_filters_and_paginates(db_session) -> None:
     assert total == 1
     assert len(items) == 1
     assert items[0].title == "Segunda oportunidade"
+
+
+def test_opportunity_transition_requires_amount_for_proposal(db_session) -> None:
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(title="Sem valor", status="open")
+    )
+
+    try:
+        service.transition_opportunity(
+            opportunity.id,
+            OpportunityTransitionRequest(to_status="proposal"),
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected proposal transition without amount to be rejected.")
+
+
+def test_opportunity_transition_requires_reason_for_lost(db_session) -> None:
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(title="Perdida", status="open", amount=1000)
+    )
+
+    try:
+        service.transition_opportunity(
+            opportunity.id,
+            OpportunityTransitionRequest(to_status="lost"),
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected lost transition without note to be rejected.")
+
+
+def test_opportunity_transition_updates_history(db_session) -> None:
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(title="Fluxo guiado", status="open", amount=5000)
+    )
+
+    transitioned = service.transition_opportunity(
+        opportunity.id,
+        OpportunityTransitionRequest(to_status="proposal", note="Proposta enviada"),
+        changed_by_email="sales@optus.com",
+    )
+
+    assert transitioned.status == "proposal"
+    history = service.list_status_history(opportunity.id)
+    assert history[0].from_status == "open"
+    assert history[0].to_status == "proposal"
+    assert history[0].note == "Proposta enviada"

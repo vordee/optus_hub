@@ -122,6 +122,7 @@ export interface OpportunityListResponse {
 }
 
 export interface OpportunityDetailItem extends OpportunityItem {
+  next_statuses: string[];
   history: StatusHistoryItem[];
 }
 

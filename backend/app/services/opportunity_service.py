@@ -9,9 +9,15 @@ from app.repositories.contact_repository import ContactRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.status_history_repository import StatusHistoryRepository
-from app.schemas.opportunity import OpportunityCreateRequest, OpportunityUpdateRequest
+from app.schemas.opportunity import OpportunityCreateRequest, OpportunityTransitionRequest, OpportunityUpdateRequest
 
 OPPORTUNITY_STATUSES = {"open", "proposal", "won", "lost"}
+OPPORTUNITY_TRANSITIONS = {
+    "open": {"proposal", "lost"},
+    "proposal": {"open", "won", "lost"},
+    "won": set(),
+    "lost": set(),
+}
 
 
 class OpportunityService:
@@ -94,18 +100,33 @@ class OpportunityService:
         if payload.status is not None:
             next_status = self._validate_status(payload.status)
             if next_status != opportunity.status:
-                previous_status = opportunity.status
-                opportunity.status = next_status
-                self.status_history_repository.create(
-                    entity_type="opportunity",
-                    entity_id=opportunity.id,
-                    from_status=previous_status,
-                    to_status=next_status,
+                self._apply_status_transition(
+                    opportunity,
+                    next_status,
                     changed_by_email=changed_by_email,
                 )
         if payload.amount is not None:
             opportunity.amount = payload.amount
 
+        return self.opportunity_repository.save(opportunity)
+
+    def transition_opportunity(
+        self,
+        opportunity_id: int,
+        payload: OpportunityTransitionRequest,
+        *,
+        changed_by_email: str | None = None,
+    ) -> Opportunity:
+        opportunity = self.get_opportunity(opportunity_id)
+        next_status = self._validate_status(payload.to_status)
+        note = self._normalize_optional(payload.note)
+        self._apply_status_transition(
+            opportunity,
+            next_status,
+            changed_by_email=changed_by_email,
+            note=note,
+            enforce_lost_note=True,
+        )
         return self.opportunity_repository.save(opportunity)
 
     def list_status_history(self, opportunity_id: int):
@@ -114,6 +135,10 @@ class OpportunityService:
             entity_type="opportunity",
             entity_id=opportunity_id,
         )
+
+    def list_next_statuses(self, opportunity_id: int) -> list[str]:
+        opportunity = self.get_opportunity(opportunity_id)
+        return sorted(OPPORTUNITY_TRANSITIONS[opportunity.status])
 
     def _resolve_relationships(
         self,
@@ -160,6 +185,33 @@ class OpportunityService:
         if normalized not in OPPORTUNITY_STATUSES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown opportunity status.")
         return normalized
+
+    def _apply_status_transition(
+        self,
+        opportunity: Opportunity,
+        next_status: str,
+        *,
+        changed_by_email: str | None = None,
+        note: str | None = None,
+        enforce_lost_note: bool = False,
+    ) -> None:
+        previous_status = opportunity.status
+        if next_status not in OPPORTUNITY_TRANSITIONS[previous_status]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid opportunity transition.")
+        if next_status in {"proposal", "won"} and opportunity.amount is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Amount is required before proposal or won.")
+        if next_status == "lost" and enforce_lost_note and not note:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Loss reason is required.")
+
+        opportunity.status = next_status
+        self.status_history_repository.create(
+            entity_type="opportunity",
+            entity_id=opportunity.id,
+            from_status=previous_status,
+            to_status=next_status,
+            changed_by_email=changed_by_email,
+            note=note,
+        )
 
     @staticmethod
     def _normalize_optional(value: str | None) -> str | None:

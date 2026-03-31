@@ -7,6 +7,7 @@ from app.schemas.opportunity import (
     OpportunityDetailResponse,
     OpportunityListResponse,
     OpportunityResponse,
+    OpportunityTransitionRequest,
     OpportunityUpdateRequest,
 )
 from app.schemas.status_history import StatusHistoryResponse
@@ -72,6 +73,7 @@ def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
         opportunity = service.get_opportunity(opportunity_id)
         return OpportunityDetailResponse(
             **serialize_opportunity(opportunity).model_dump(),
+            next_statuses=service.list_next_statuses(opportunity_id),
             history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id)],
         )
 
@@ -103,6 +105,40 @@ def create_opportunity(
                 "contact_id": opportunity.contact_id,
                 "status": opportunity.status,
                 "amount": float(opportunity.amount) if opportunity.amount is not None else None,
+            },
+        )
+        return serialize_opportunity(opportunity)
+
+
+@router.post(
+    "/opportunities/{opportunity_id}/transition",
+    response_model=OpportunityResponse,
+    dependencies=[Depends(require_permission("opportunities:write"))],
+)
+def transition_opportunity(
+    opportunity_id: int,
+    payload: OpportunityTransitionRequest,
+    request: Request,
+    current_user_email: str = Depends(get_current_user_email),
+) -> OpportunityResponse:
+    with SessionLocal() as db:
+        opportunity = OpportunityService(db).transition_opportunity(
+            opportunity_id,
+            payload,
+            changed_by_email=current_user_email,
+        )
+        AuditService(db).record_event(
+            action="crm.opportunity.transition",
+            status="success",
+            actor_email=current_user_email,
+            target_type="opportunity",
+            target_id=str(opportunity.id),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            details={
+                "title": opportunity.title,
+                "status": opportunity.status,
+                "note": payload.note,
             },
         )
         return serialize_opportunity(opportunity)
