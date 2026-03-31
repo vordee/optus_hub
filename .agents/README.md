@@ -12,6 +12,9 @@ Esta pasta materializa a operação do projeto como uma software house enxuta.
 - `workflow-projects`: evolui CRM, oportunidades, projetos e motor de workflow
 - `security-sre`: cuida de hardening, servidor Linux, nginx, PostgreSQL e publicação
 - `qa-release`: valida contrato, testes, regressão e prontidão de deploy
+- `financial-integrations`: cuida de integrações financeiras e faturamento
+- `documents-ops`: cuida da camada documental e aceite
+- `observability-platform`: cuida de logs, métricas e diagnóstico
 
 ## Regra de ownership
 
@@ -29,9 +32,16 @@ Esta pasta materializa a operação do projeto como uma software house enxuta.
 4. o agente líder integra, testa o conjunto e publica
 5. deploy só ocorre com serviço, healthcheck e rota crítica validados
 
+## Artefatos de operação
+
+- `team.md`: desenho da equipe recomendada por fase
+- `active-board.md`: frentes ativas e próximos passos
+- `handoffs.md`: padrão de passagem entre agentes
+
 ## Corte atual
 
 - consolidar base administrativa
 - evoluir CRM para histórico e navegação operacional
 - abrir módulo de projetos conectado a oportunidades ganhas
 - manter servidor Oracle Linux previsível e fácil de operar
+- evoluir tarefas e workflow operacional de projetos
