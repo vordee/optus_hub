@@ -19,6 +19,10 @@ class RoleRepository:
         stmt = select(Role).options(selectinload(Role.permissions)).where(Role.name == name)
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_by_id(self, role_id: int) -> Role | None:
+        stmt = select(Role).options(selectinload(Role.permissions)).where(Role.id == role_id)
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def create(self, name: str, description: str) -> Role:
         role = Role(name=name, description=description)
         self.db.add(role)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import get_current_user_email, require_permission
 from app.core.database import SessionLocal
-from app.schemas.role import RoleCreateRequest, RoleResponse
+from app.schemas.role import RoleCreateRequest, RoleResponse, RoleUpdateRequest
 from app.services.audit_service import AuditService
 from app.services.role_service import RoleService
 
@@ -41,6 +41,28 @@ def create_role(
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
             details={"name": role.name, "permissions": sorted(permission.code for permission in role.permissions)},
+        )
+        return serialize_role(role)
+
+
+@router.patch("/roles/{role_id}", response_model=RoleResponse, dependencies=[Depends(require_permission("roles:write"))])
+def update_role(
+    role_id: int,
+    payload: RoleUpdateRequest,
+    request: Request,
+    current_user_email: str = Depends(get_current_user_email),
+) -> RoleResponse:
+    with SessionLocal() as db:
+        role = RoleService(db).update_role(role_id, payload)
+        AuditService(db).record_event(
+            action="admin.role.update",
+            status="success",
+            actor_email=current_user_email,
+            target_type="role",
+            target_id=str(role.id),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            details={"name": role.name, "description": role.description, "permissions": sorted(permission.code for permission in role.permissions)},
         )
         return serialize_role(role)
 

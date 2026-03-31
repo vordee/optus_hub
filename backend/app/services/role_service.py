@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.role import Role
 from app.repositories.permission_repository import PermissionRepository
 from app.repositories.role_repository import RoleRepository
-from app.schemas.role import RoleCreateRequest
+from app.schemas.role import RoleCreateRequest, RoleUpdateRequest
 
 
 class RoleService:
@@ -24,6 +24,26 @@ class RoleService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role already exists.")
 
         role = self.role_repository.create(name=payload.name, description=payload.description)
+        for permission_code in payload.permission_codes:
+            permission = self.permission_repository.get_by_code(permission_code)
+            if permission is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unknown permission: {permission_code}",
+                )
+            role.permissions.append(permission)
+
+        self.db.commit()
+        self.db.refresh(role)
+        return role
+
+    def update_role(self, role_id: int, payload: RoleUpdateRequest) -> Role:
+        role = self.role_repository.get_by_id(role_id)
+        if role is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found.")
+
+        role.description = payload.description
+        role.permissions = []
         for permission_code in payload.permission_codes:
             permission = self.permission_repository.get_by_code(permission_code)
             if permission is None:

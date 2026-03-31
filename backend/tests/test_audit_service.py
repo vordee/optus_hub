@@ -1,5 +1,5 @@
 from app.models.audit_event import AuditEvent
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import ChangePasswordRequest, LoginRequest
 from app.schemas.role import RoleCreateRequest
 from app.schemas.user import UserCreateRequest
 from app.services.auth_service import AuthService
@@ -79,3 +79,40 @@ def test_manual_admin_actions_are_listed_in_recent_order(db_session) -> None:
 
     assert [event.action for event in events] == ["admin.user.create", "admin.role.create"]
     assert all(isinstance(event, AuditEvent) for event in events)
+
+
+def test_change_password_records_successful_audit_event(db_session) -> None:
+    service = AuthService(db_session)
+
+    service.change_password(
+        "admin@example.com",
+        ChangePasswordRequest(current_password="super-secret", new_password="new-secret"),
+        ip_address="127.0.0.1",
+        user_agent="pytest",
+    )
+
+    events = AuditService(db_session).list_events(limit=10)
+    assert events[0].action == "auth.change_password"
+    assert events[0].status == "success"
+    assert events[0].actor_email == "admin@example.com"
+    assert events[0].ip_address == "127.0.0.1"
+
+
+def test_change_password_records_failed_audit_event(db_session) -> None:
+    service = AuthService(db_session)
+
+    try:
+        service.change_password(
+            "admin@example.com",
+            ChangePasswordRequest(current_password="wrong-password", new_password="new-secret"),
+            ip_address="127.0.0.1",
+            user_agent="pytest",
+        )
+    except Exception:
+        pass
+
+    events = AuditService(db_session).list_events(limit=10)
+    assert events[0].action == "auth.change_password"
+    assert events[0].status == "failure"
+    assert events[0].actor_email == "admin@example.com"
+    assert events[0].details == {"reason": "invalid_current_password"}

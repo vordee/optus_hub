@@ -21,6 +21,14 @@ class UserRepository:
         )
         return self.db.execute(stmt).scalar_one_or_none()
 
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        stmt = (
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.permissions))
+            .where(User.id == user_id)
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def list_all(self) -> list[User]:
         stmt = select(User).options(selectinload(User.roles).selectinload(Role.permissions)).order_by(User.id)
         return list(self.db.execute(stmt).scalars().unique().all())

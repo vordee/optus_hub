@@ -7,6 +7,11 @@ class RoleCreateRequest(BaseModel):
     permission_codes: list[str] = []
 
 
+class RoleUpdateRequest(BaseModel):
+    description: str
+    permission_codes: list[str] = []
+
+
 class RoleResponse(BaseModel):
     id: int
     name: str
