@@ -14,6 +14,8 @@ DEFAULT_PERMISSIONS = {
     "contacts:write": "Criar e gerenciar contatos.",
     "leads:read": "Listar leads.",
     "leads:write": "Criar e gerenciar leads.",
+    "opportunities:read": "Listar oportunidades.",
+    "opportunities:write": "Criar e gerenciar oportunidades.",
     "users:read": "Listar usuarios.",
     "users:write": "Criar e gerenciar usuarios.",
     "roles:read": "Listar papeis.",

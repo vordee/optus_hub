@@ -11,6 +11,7 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.lead import Lead
+    from app.models.opportunity import Opportunity
 
 
 class Contact(Base):
@@ -30,3 +31,4 @@ class Contact(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow, nullable=False)
     company: Mapped[Optional["Company"]] = relationship(back_populates="contacts", lazy="joined")
     leads: Mapped[list["Lead"]] = relationship(back_populates="contact", lazy="selectin")
+    opportunities: Mapped[list["Opportunity"]] = relationship(back_populates="contact", lazy="selectin")
