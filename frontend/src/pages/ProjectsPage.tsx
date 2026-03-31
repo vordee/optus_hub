@@ -10,6 +10,7 @@ import type {
   ProjectDetailItem,
   ProjectItem,
   ProjectListResponse,
+  ProjectPhaseItem,
   ProjectTaskItem,
 } from "../app/types";
 
@@ -42,6 +43,7 @@ export function ProjectsPage() {
   });
   const [taskForm, setTaskForm] = useState({
     title: "",
+    project_phase_id: "",
     description: "",
     status: "pending",
     assigned_to_email: "",
@@ -174,6 +176,7 @@ export function ProjectsPage() {
     });
     setTaskForm({
       title: "",
+      project_phase_id: "",
       description: "",
       status: "pending",
       assigned_to_email: "",
@@ -195,6 +198,7 @@ export function ProjectsPage() {
         method: "POST",
         body: JSON.stringify({
           title: taskForm.title,
+          project_phase_id: taskForm.project_phase_id ? Number(taskForm.project_phase_id) : null,
           description: taskForm.description || null,
           status: taskForm.status,
           assigned_to_email: taskForm.assigned_to_email || null,
@@ -203,6 +207,7 @@ export function ProjectsPage() {
       });
       setTaskForm({
         title: "",
+        project_phase_id: "",
         description: "",
         status: "pending",
         assigned_to_email: "",
@@ -444,6 +449,21 @@ export function ProjectsPage() {
               <p>{selectedDetail.description || "Sem descrição."}</p>
               <div className="detail-section">
                 <div className="section-heading">
+                  <span className="eyebrow">Fases</span>
+                  <h3>Mapa operacional</h3>
+                </div>
+                <div className="phase-grid">
+                  {selectedDetail.phases.map((phase) => (
+                    <PhaseCard
+                      key={phase.id}
+                      phase={phase}
+                      tasks={tasks.filter((task) => task.project_phase_id === phase.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="detail-section">
+                <div className="section-heading">
                   <span className="eyebrow">Tarefas</span>
                   <h3>Execução do projeto</h3>
                 </div>
@@ -463,6 +483,22 @@ export function ProjectsPage() {
                     />
                   </label>
                   <div className="task-form-grid">
+                    <label className="field">
+                      <span>Fase</span>
+                      <select
+                        value={taskForm.project_phase_id}
+                        onChange={(event) =>
+                          setTaskForm((current) => ({ ...current, project_phase_id: event.target.value }))
+                        }
+                      >
+                        <option value="">Sem fase vinculada</option>
+                        {selectedDetail.phases.map((phase) => (
+                          <option key={phase.id} value={phase.id}>
+                            {phase.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="field">
                       <span>Status</span>
                       <select
@@ -507,6 +543,7 @@ export function ProjectsPage() {
                         <strong>{task.title}</strong>
                         <p>{task.description || "Sem descrição."}</p>
                         <div className="detail-meta">
+                          <span>{task.project_phase_name || "Sem fase"}</span>
                           <span>{task.assigned_to_email || "Sem responsável"}</span>
                           <span>{task.due_date || "Sem prazo"}</span>
                           <span>{formatDateTime(task.created_at)}</span>
@@ -548,5 +585,31 @@ export function ProjectsPage() {
         </div>
       </article>
     </section>
+  );
+}
+
+function PhaseCard({
+  phase,
+  tasks,
+}: {
+  phase: ProjectPhaseItem;
+  tasks: ProjectTaskItem[];
+}) {
+  const phaseStatusClass = phase.status === "completed" ? "done" : phase.status;
+
+  return (
+    <article className="phase-card">
+      <div className="phase-card-head">
+        <div>
+          <span className="eyebrow">Fase {phase.sequence}</span>
+          <h3>{phase.name}</h3>
+        </div>
+        <span className={`status-pill status-task-${phaseStatusClass}`}>{phase.status}</span>
+      </div>
+      <div className="detail-meta">
+        <span>{tasks.length} tarefa(s)</span>
+        <span>{phase.started_at ? formatDateTime(phase.started_at) : "Não iniciada"}</span>
+      </div>
+    </article>
   );
 }

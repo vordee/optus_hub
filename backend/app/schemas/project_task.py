@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class ProjectTaskCreateRequest(BaseModel):
+    project_phase_id: Optional[int] = None
     title: str
     description: Optional[str] = None
     status: str = "pending"
@@ -13,6 +14,7 @@ class ProjectTaskCreateRequest(BaseModel):
 
 
 class ProjectTaskUpdateRequest(BaseModel):
+    project_phase_id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -23,6 +25,8 @@ class ProjectTaskUpdateRequest(BaseModel):
 class ProjectTaskResponse(BaseModel):
     id: int
     project_id: int
+    project_phase_id: Optional[int]
+    project_phase_name: Optional[str]
     title: str
     description: Optional[str]
     status: str

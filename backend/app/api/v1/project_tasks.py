@@ -13,6 +13,8 @@ def serialize_task(task) -> ProjectTaskResponse:
     return ProjectTaskResponse(
         id=task.id,
         project_id=task.project_id,
+        project_phase_id=task.project_phase_id,
+        project_phase_name=task.project_phase.name if task.project_phase else None,
         title=task.title,
         description=task.description,
         status=task.status,

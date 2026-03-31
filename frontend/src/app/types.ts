@@ -146,12 +146,28 @@ export interface ProjectListResponse {
 }
 
 export interface ProjectDetailItem extends ProjectItem {
+  phases: ProjectPhaseItem[];
   history: StatusHistoryItem[];
+}
+
+export interface ProjectPhaseItem {
+  id: number;
+  project_id: number;
+  key: string;
+  name: string;
+  sequence: number;
+  status: string;
+  notes: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
 }
 
 export interface ProjectTaskItem {
   id: number;
   project_id: number;
+  project_phase_id: number | null;
+  project_phase_name: string | null;
   title: string;
   description: string | null;
   status: string;

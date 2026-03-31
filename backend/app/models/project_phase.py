@@ -11,6 +11,7 @@ from app.core.time import local_now
 
 if TYPE_CHECKING:
     from app.models.project import Project
+    from app.models.project_task import ProjectTask
 
 
 class ProjectPhase(Base):
@@ -27,3 +28,4 @@ class ProjectPhase(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=False), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
     project: Mapped["Project"] = relationship(back_populates="phases")
+    tasks: Mapped[list["ProjectTask"]] = relationship(back_populates="project_phase", lazy="selectin")

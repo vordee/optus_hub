@@ -360,6 +360,26 @@ tbody tr:hover {
   margin-top: 18px;
 }
 
+.phase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.phase-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.phase-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
 .detail-meta {
   display: flex;
   flex-wrap: wrap;
@@ -437,7 +457,7 @@ tbody tr:hover {
 
 .task-form-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -631,6 +651,7 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  .phase-grid,
   .task-form-grid,
   .task-item {
     grid-template-columns: 1fr;
