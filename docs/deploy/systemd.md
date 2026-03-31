@@ -6,9 +6,14 @@
 - worker de fila
 - webhook processor se necessario
 
+## Estado atual
+
+- servico ativo: `optus-hub-api`
+- usuario de execucao: `optushub`
+- restart policy: `always`
+
 ## Pendencias
 
-- usuario de execucao
-- diretorios de runtime e logs
-- restart policy
-- health checks operacionais
+- worker dedicado quando filas entrarem em uso
+- webhook processor separado quando houver necessidade real
+- journald e rotacao de logs operacional formalizada

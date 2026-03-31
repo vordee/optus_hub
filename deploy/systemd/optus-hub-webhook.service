@@ -1,0 +1,13 @@
+[Unit]
+Description=Optus Hub webhook processor placeholder
+After=network.target
+
+[Service]
+Type=simple
+User=optushub
+Group=optushub
+WorkingDirectory=/opt/optus_hub/backend
+ExecStart=/usr/bin/env bash -lc 'echo webhook processor not implemented yet; sleep infinity'
+
+[Install]
+WantedBy=multi-user.target

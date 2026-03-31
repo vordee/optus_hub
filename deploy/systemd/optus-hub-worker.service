@@ -1,0 +1,13 @@
+[Unit]
+Description=Optus Hub worker placeholder
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=optushub
+Group=optushub
+WorkingDirectory=/opt/optus_hub/backend
+ExecStart=/usr/bin/env bash -lc 'echo worker not implemented yet; sleep infinity'
+
+[Install]
+WantedBy=multi-user.target

@@ -13,6 +13,15 @@ O sistema deve executar em Linux sem Docker.
 - Nginx
 - systemd
 
+## Estado atual
+
+Primeira implantacao validada em Oracle Linux 9.7 no host `10.222.222.33`.
+
+- app root: `/opt/optus_hub`
+- backend service: `optus-hub-api`
+- nginx publicado em `80/tcp`
+- PostgreSQL local para o backend
+
 ## Observacao
 
-Os artefatos de deploy ainda sao placeholders. Definir procedimento idempotente de instalacao antes da primeira implantacao.
+Os artefatos em `deploy/` devem continuar refletindo o estado real do host para manter a operacao humana simples.
