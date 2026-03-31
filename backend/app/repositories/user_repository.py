@@ -25,6 +25,15 @@ class UserRepository:
         stmt = select(User).options(selectinload(User.roles).selectinload(Role.permissions)).order_by(User.id)
         return list(self.db.execute(stmt).scalars().unique().all())
 
+    def list_superusers(self) -> list[User]:
+        stmt = (
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.permissions))
+            .where(User.is_superuser.is_(True))
+            .order_by(User.id)
+        )
+        return list(self.db.execute(stmt).scalars().unique().all())
+
     def create(
         self,
         email: str,

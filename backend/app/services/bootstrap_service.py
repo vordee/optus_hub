@@ -25,6 +25,7 @@ class BootstrapService:
     def ensure_foundation_data(self) -> None:
         permissions = self._ensure_permissions()
         admin_role = self._ensure_admin_role(permissions)
+        self._ensure_superusers_have_admin_role(admin_role)
         self._ensure_admin_user(admin_role)
         self.db.commit()
 
@@ -63,3 +64,8 @@ class BootstrapService:
     def _bootstrap_seed_disabled(self) -> bool:
         email = self.settings.bootstrap_admin_email.strip().lower()
         return email.endswith(".invalid")
+
+    def _ensure_superusers_have_admin_role(self, admin_role) -> None:
+        for user in self.user_repository.list_superusers():
+            if admin_role not in user.roles:
+                user.roles.append(admin_role)
