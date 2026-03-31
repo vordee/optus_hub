@@ -1,10 +1,10 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -15,3 +15,12 @@ class TokenResponse(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
+
+
+class AuthenticatedUserResponse(BaseModel):
+    email: EmailStr
+    full_name: str
+    is_active: bool
+    is_superuser: bool
+    roles: list[str]
+    permissions: list[str]

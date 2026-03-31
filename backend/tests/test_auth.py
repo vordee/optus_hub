@@ -35,3 +35,13 @@ def test_authenticate_rejects_invalid_password(db_session) -> None:
         assert getattr(exc, "status_code", None) == 401
     else:
         raise AssertionError("Expected authentication to fail for invalid password.")
+
+
+def test_admin_user_has_admin_role_and_permissions(db_session) -> None:
+    service = AuthService(db_session)
+
+    user = service.get_authenticated_user("admin@example.com")
+
+    assert "admin" in user.roles
+    assert "users:read" in user.permissions
+    assert "roles:write" in user.permissions

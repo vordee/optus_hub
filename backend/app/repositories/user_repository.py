@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.models.role import Role
 from app.models.user import User
 
 
@@ -11,17 +14,37 @@ class UserRepository:
         self.db = db
 
     def get_by_email(self, email: str) -> Optional[User]:
-        stmt = select(User).where(User.email == email)
+        stmt = (
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.permissions))
+            .where(User.email == email)
+        )
         return self.db.execute(stmt).scalar_one_or_none()
 
-    def create_bootstrap_admin(self, email: str, hashed_password: str) -> User:
+    def list_all(self) -> list[User]:
+        stmt = select(User).options(selectinload(User.roles).selectinload(Role.permissions)).order_by(User.id)
+        return list(self.db.execute(stmt).scalars().unique().all())
+
+    def create(
+        self,
+        email: str,
+        full_name: str,
+        hashed_password: str,
+        is_active: bool = True,
+        is_superuser: bool = False,
+    ) -> User:
         user = User(
             email=email,
+            full_name=full_name,
             hashed_password=hashed_password,
-            is_active=True,
-            is_superuser=True,
+            is_active=is_active,
+            is_superuser=is_superuser,
         )
         self.db.add(user)
+        self.db.flush()
+        return user
+
+    def save(self, user: User) -> User:
         self.db.commit()
         self.db.refresh(user)
         return user
