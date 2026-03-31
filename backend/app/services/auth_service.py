@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import HTTPException, status
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
@@ -5,21 +7,47 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token, decode_access_token, verify_password
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import AuthenticatedUserResponse, LoginRequest, TokenResponse
+from app.services.audit_service import AuditService
 
 
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.user_repository = UserRepository(db)
+        self.audit_service = AuditService(db)
 
-    def authenticate(self, payload: LoginRequest) -> TokenResponse:
+    def authenticate(
+        self,
+        payload: LoginRequest,
+        *,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> TokenResponse:
         user = self.user_repository.get_by_email(payload.email)
         if user is None or not user.is_active or not verify_password(payload.password, user.hashed_password):
+            self.audit_service.record_event(
+                action="auth.login",
+                status="failure",
+                actor_email=payload.email,
+                target_type="user",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                details={"reason": "invalid_credentials"},
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials.",
             )
 
+        self.audit_service.record_event(
+            action="auth.login",
+            status="success",
+            actor=user,
+            target_type="user",
+            target_id=str(user.id),
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
         return TokenResponse(access_token=create_access_token(user.email))
 
     def get_authenticated_user(self, email: str) -> AuthenticatedUserResponse:

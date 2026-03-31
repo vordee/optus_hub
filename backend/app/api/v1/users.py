@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import require_permission
+from app.api.deps import get_current_user_email, require_permission
 from app.core.database import SessionLocal
 from app.schemas.user import UserCreateRequest, UserResponse
+from app.services.audit_service import AuditService
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -27,6 +28,21 @@ def list_users() -> list[UserResponse]:
 
 
 @router.post("/users", response_model=UserResponse, dependencies=[Depends(require_permission("users:write"))])
-def create_user(payload: UserCreateRequest) -> UserResponse:
+def create_user(
+    payload: UserCreateRequest,
+    request: Request,
+    current_user_email: str = Depends(get_current_user_email),
+) -> UserResponse:
     with SessionLocal() as db:
-        return serialize_user(UserService(db).create_user(payload))
+        user = UserService(db).create_user(payload)
+        AuditService(db).record_event(
+            action="admin.user.create",
+            status="success",
+            actor_email=current_user_email,
+            target_type="user",
+            target_id=str(user.id),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            details={"email": user.email, "roles": sorted(role.name for role in user.roles)},
+        )
+        return serialize_user(user)

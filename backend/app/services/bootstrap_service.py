@@ -7,6 +7,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 
 DEFAULT_PERMISSIONS = {
+    "audit:read": "Listar eventos de auditoria.",
     "users:read": "Listar usuarios.",
     "users:write": "Criar e gerenciar usuarios.",
     "roles:read": "Listar papeis.",

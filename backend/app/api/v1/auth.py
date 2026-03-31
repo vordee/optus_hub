@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import get_current_user_email
 from app.core.database import SessionLocal
@@ -9,9 +9,13 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest) -> TokenResponse:
+def login(payload: LoginRequest, request: Request) -> TokenResponse:
     with SessionLocal() as db:
-        return AuthService(db).authenticate(payload)
+        return AuthService(db).authenticate(
+            payload,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
 
 
 @router.get("/me", response_model=AuthenticatedUserResponse)
