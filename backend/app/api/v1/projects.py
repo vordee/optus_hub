@@ -182,8 +182,8 @@ def update_project(
 @router.post("/projects/from-opportunity/{opportunity_id}", response_model=ProjectResponse, dependencies=[Depends(require_permission("projects:write"))])
 def create_project_from_opportunity(
     opportunity_id: int,
-    payload: ProjectKickoffRequest | None = None,
     request: Request,
+    payload: ProjectKickoffRequest | None = None,
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectResponse:
     with SessionLocal() as db:

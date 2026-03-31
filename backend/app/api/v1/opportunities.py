@@ -186,8 +186,8 @@ def transition_opportunity(
 )
 def kickoff_opportunity(
     opportunity_id: int,
-    payload: ProjectKickoffRequest | None = None,
     request: Request,
+    payload: ProjectKickoffRequest | None = None,
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectResponse:
     with SessionLocal() as db:
