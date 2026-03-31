@@ -326,6 +326,10 @@ tbody tr.selected-row {
   gap: 6px;
 }
 
+.field-span-2 {
+  grid-column: span 2;
+}
+
 .field span {
   color: var(--text-soft);
 }

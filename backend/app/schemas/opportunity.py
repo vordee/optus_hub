@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -49,6 +49,8 @@ class OpportunityProjectSummary(BaseModel):
     id: int
     name: str
     status: str
+    kickoff_owner_email: Optional[str] = None
+    kickoff_target_date: Optional[date] = None
 
 
 class OpportunityListResponse(BaseModel):

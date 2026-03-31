@@ -5,6 +5,7 @@ from app.core.database import SessionLocal
 from app.schemas.project import (
     ProjectCreateRequest,
     ProjectDetailResponse,
+    ProjectKickoffRequest,
     ProjectListResponse,
     ProjectResponse,
     ProjectUpdateRequest,
@@ -28,6 +29,9 @@ def serialize_project(project) -> ProjectResponse:
         name=project.name,
         status=project.status,
         description=project.description,
+        kickoff_owner_email=project.kickoff_owner_email,
+        kickoff_target_date=project.kickoff_target_date,
+        kickoff_notes=project.kickoff_notes,
         created_at=project.created_at,
     )
 
@@ -105,7 +109,13 @@ def create_project(
             target_id=str(project.id),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={"name": project.name, "status": project.status, "opportunity_id": project.opportunity_id},
+            details={
+                "name": project.name,
+                "status": project.status,
+                "opportunity_id": project.opportunity_id,
+                "kickoff_owner_email": project.kickoff_owner_email,
+                "kickoff_target_date": project.kickoff_target_date.isoformat() if project.kickoff_target_date else None,
+            },
         )
         return serialize_project(project)
 
@@ -159,7 +169,12 @@ def update_project(
             target_id=str(project.id),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={"name": project.name, "status": project.status},
+            details={
+                "name": project.name,
+                "status": project.status,
+                "kickoff_owner_email": project.kickoff_owner_email,
+                "kickoff_target_date": project.kickoff_target_date.isoformat() if project.kickoff_target_date else None,
+            },
         )
         return serialize_project(project)
 
@@ -167,11 +182,19 @@ def update_project(
 @router.post("/projects/from-opportunity/{opportunity_id}", response_model=ProjectResponse, dependencies=[Depends(require_permission("projects:write"))])
 def create_project_from_opportunity(
     opportunity_id: int,
+    payload: ProjectKickoffRequest | None = None,
     request: Request,
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectResponse:
     with SessionLocal() as db:
-        project = ProjectService(db).create_from_opportunity(opportunity_id, changed_by_email=current_user_email)
+        project = ProjectService(db).create_from_opportunity(
+            opportunity_id,
+            changed_by_email=current_user_email,
+            project_name=payload.project_name if payload else None,
+            kickoff_owner_email=payload.kickoff_owner_email if payload else None,
+            kickoff_target_date=payload.kickoff_target_date if payload else None,
+            kickoff_notes=payload.kickoff_notes if payload else None,
+        )
         AuditService(db).record_event(
             action="project.create_from_opportunity",
             status="success",
@@ -180,6 +203,11 @@ def create_project_from_opportunity(
             target_id=str(project.id),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={"name": project.name, "opportunity_id": project.opportunity_id},
+            details={
+                "name": project.name,
+                "opportunity_id": project.opportunity_id,
+                "kickoff_owner_email": project.kickoff_owner_email,
+                "kickoff_target_date": project.kickoff_target_date.isoformat() if project.kickoff_target_date else None,
+            },
         )
         return serialize_project(project)

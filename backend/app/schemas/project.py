@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -14,12 +14,25 @@ class ProjectCreateRequest(BaseModel):
     name: str
     status: str = "planned"
     description: Optional[str] = None
+    kickoff_owner_email: Optional[str] = None
+    kickoff_target_date: Optional[date] = None
+    kickoff_notes: Optional[str] = None
 
 
 class ProjectUpdateRequest(BaseModel):
     name: Optional[str] = None
     status: Optional[str] = None
     description: Optional[str] = None
+    kickoff_owner_email: Optional[str] = None
+    kickoff_target_date: Optional[date] = None
+    kickoff_notes: Optional[str] = None
+
+
+class ProjectKickoffRequest(BaseModel):
+    project_name: Optional[str] = None
+    kickoff_owner_email: Optional[str] = None
+    kickoff_target_date: Optional[date] = None
+    kickoff_notes: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
@@ -32,6 +45,9 @@ class ProjectResponse(BaseModel):
     name: str
     status: str
     description: Optional[str]
+    kickoff_owner_email: Optional[str]
+    kickoff_target_date: Optional[date]
+    kickoff_notes: Optional[str]
     created_at: datetime
 
 

@@ -17,17 +17,29 @@ def test_create_and_update_project(db_session) -> None:
     service = ProjectService(db_session)
 
     project = service.create_project(
-        ProjectCreateRequest(name="Projeto inicial", status="planned"),
+        ProjectCreateRequest(
+            name="Projeto inicial",
+            status="planned",
+            kickoff_owner_email="pm@optus.com",
+            kickoff_notes="Escopo inicial alinhado",
+        ),
         changed_by_email="admin@example.com",
     )
     updated = service.update_project(
         project.id,
-        ProjectUpdateRequest(name="Projeto em andamento", status="active"),
+        ProjectUpdateRequest(
+            name="Projeto em andamento",
+            status="active",
+            kickoff_owner_email="ops@example.com",
+            kickoff_notes="Kickoff refinado",
+        ),
         changed_by_email="ops@example.com",
     )
 
     assert updated.name == "Projeto em andamento"
     assert updated.status == "active"
+    assert updated.kickoff_owner_email == "ops@example.com"
+    assert updated.kickoff_notes == "Kickoff refinado"
     history = service.list_status_history(project.id)
     assert len(history) == 2
     assert history[0].from_status == "planned"
@@ -78,6 +90,27 @@ def test_create_project_from_won_opportunity(db_session) -> None:
     assert len(phases) == 6
     assert history[0].changed_by_email == "admin@example.com"
     assert history[0].note == f"kickoff opened from opportunity {opportunity.id}"
+
+
+def test_create_project_from_won_opportunity_with_kickoff_context(db_session) -> None:
+    opportunity = OpportunityService(db_session).create_opportunity(
+        OpportunityCreateRequest(title="Oportunidade vencedora", status="won")
+    )
+
+    project = ProjectService(db_session).create_from_opportunity(
+        opportunity.id,
+        changed_by_email="admin@example.com",
+        project_name="Kickoff assistido",
+        kickoff_owner_email="pm@optus.com",
+        kickoff_notes="Agendar alinhamento com operacao",
+    )
+
+    assert project.name == "Kickoff assistido"
+    assert project.kickoff_owner_email == "pm@optus.com"
+    assert project.kickoff_notes == "Agendar alinhamento com operacao"
+    history = ProjectService(db_session).list_status_history(project.id)
+    assert "owner=pm@optus.com" in history[0].note
+    assert "note=Agendar alinhamento com operacao" in history[0].note
 
 
 def test_create_project_from_non_won_opportunity_rejects(db_session) -> None:

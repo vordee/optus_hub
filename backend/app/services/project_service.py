@@ -90,6 +90,9 @@ class ProjectService:
             name=payload.name.strip(),
             status=validated_status,
             description=self._normalize_optional(payload.description),
+            kickoff_owner_email=self._normalize_optional(payload.kickoff_owner_email),
+            kickoff_target_date=payload.kickoff_target_date,
+            kickoff_notes=self._normalize_optional(payload.kickoff_notes),
         )
         self.status_history_repository.create(
             entity_type="project",
@@ -128,10 +131,25 @@ class ProjectService:
                 )
         if payload.description is not None:
             project.description = self._normalize_optional(payload.description)
+        if payload.kickoff_owner_email is not None:
+            project.kickoff_owner_email = self._normalize_optional(payload.kickoff_owner_email)
+        if payload.kickoff_target_date is not None:
+            project.kickoff_target_date = payload.kickoff_target_date
+        if payload.kickoff_notes is not None:
+            project.kickoff_notes = self._normalize_optional(payload.kickoff_notes)
 
         return self.project_repository.save(project)
 
-    def create_from_opportunity(self, opportunity_id: int, *, changed_by_email: str | None = None) -> Project:
+    def create_from_opportunity(
+        self,
+        opportunity_id: int,
+        *,
+        changed_by_email: str | None = None,
+        project_name: str | None = None,
+        kickoff_owner_email: str | None = None,
+        kickoff_target_date=None,
+        kickoff_notes: str | None = None,
+    ) -> Project:
         opportunity = self.opportunity_repository.get_by_id(opportunity_id)
         if opportunity is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found.")
@@ -144,9 +162,12 @@ class ProjectService:
             opportunity_id=opportunity.id,
             company_id=opportunity.company_id,
             contact_id=opportunity.contact_id,
-            name=opportunity.title,
+            name=self._normalize_optional(project_name) or opportunity.title,
             status="planned",
             description=opportunity.description,
+            kickoff_owner_email=self._normalize_optional(kickoff_owner_email),
+            kickoff_target_date=kickoff_target_date,
+            kickoff_notes=self._normalize_optional(kickoff_notes),
         )
         self.status_history_repository.create(
             entity_type="project",
@@ -154,10 +175,32 @@ class ProjectService:
             from_status=None,
             to_status="planned",
             changed_by_email=changed_by_email,
-            note=f"kickoff opened from opportunity {opportunity.id}",
+            note=self._build_kickoff_note(
+                opportunity.id,
+                kickoff_owner_email=self._normalize_optional(kickoff_owner_email),
+                kickoff_target_date=kickoff_target_date.isoformat() if kickoff_target_date else None,
+                kickoff_notes=self._normalize_optional(kickoff_notes),
+            ),
         )
         self._ensure_default_phases(project)
         return self.project_repository.save(project)
+
+    @staticmethod
+    def _build_kickoff_note(
+        opportunity_id: int,
+        *,
+        kickoff_owner_email: str | None,
+        kickoff_target_date: str | None,
+        kickoff_notes: str | None,
+    ) -> str:
+        parts = [f"kickoff opened from opportunity {opportunity_id}"]
+        if kickoff_owner_email:
+            parts.append(f"owner={kickoff_owner_email}")
+        if kickoff_target_date:
+            parts.append(f"target={kickoff_target_date}")
+        if kickoff_notes:
+            parts.append(f"note={kickoff_notes}")
+        return " | ".join(parts)
 
     def list_status_history(self, project_id: int):
         self.get_project(project_id)

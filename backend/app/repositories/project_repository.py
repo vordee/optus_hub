@@ -67,6 +67,9 @@ class ProjectRepository:
         name: str,
         status: str,
         description: str | None,
+        kickoff_owner_email: str | None,
+        kickoff_target_date,
+        kickoff_notes: str | None,
     ) -> Project:
         project = Project(
             opportunity_id=opportunity_id,
@@ -75,6 +78,9 @@ class ProjectRepository:
             name=name,
             status=status,
             description=description,
+            kickoff_owner_email=kickoff_owner_email,
+            kickoff_target_date=kickoff_target_date,
+            kickoff_notes=kickoff_notes,
         )
         self.db.add(project)
         self.db.flush()

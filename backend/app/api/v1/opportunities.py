@@ -11,7 +11,7 @@ from app.schemas.opportunity import (
     OpportunityTransitionRequest,
     OpportunityUpdateRequest,
 )
-from app.schemas.project import ProjectResponse
+from app.schemas.project import ProjectKickoffRequest, ProjectResponse
 from app.schemas.status_history import StatusHistoryResponse
 from app.services.audit_service import AuditService
 from app.services.opportunity_service import OpportunityService
@@ -60,6 +60,9 @@ def serialize_project(project) -> ProjectResponse:
         name=project.name,
         status=project.status,
         description=project.description,
+        kickoff_owner_email=project.kickoff_owner_email,
+        kickoff_target_date=project.kickoff_target_date,
+        kickoff_notes=project.kickoff_notes,
         created_at=project.created_at,
     )
 
@@ -100,6 +103,8 @@ def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
                     id=linked_project.id,
                     name=linked_project.name,
                     status=linked_project.status,
+                    kickoff_owner_email=linked_project.kickoff_owner_email,
+                    kickoff_target_date=linked_project.kickoff_target_date,
                 )
                 if linked_project is not None
                 else None
@@ -181,6 +186,7 @@ def transition_opportunity(
 )
 def kickoff_opportunity(
     opportunity_id: int,
+    payload: ProjectKickoffRequest | None = None,
     request: Request,
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectResponse:
@@ -188,6 +194,10 @@ def kickoff_opportunity(
         project = ProjectService(db).create_from_opportunity(
             opportunity_id,
             changed_by_email=current_user_email,
+            project_name=payload.project_name if payload else None,
+            kickoff_owner_email=payload.kickoff_owner_email if payload else None,
+            kickoff_target_date=payload.kickoff_target_date if payload else None,
+            kickoff_notes=payload.kickoff_notes if payload else None,
         )
         AuditService(db).record_event(
             action="crm.opportunity.kickoff",
@@ -201,6 +211,8 @@ def kickoff_opportunity(
                 "opportunity_id": opportunity_id,
                 "project_id": project.id,
                 "project_name": project.name,
+                "kickoff_owner_email": project.kickoff_owner_email,
+                "kickoff_target_date": project.kickoff_target_date.isoformat() if project.kickoff_target_date else None,
             },
         )
         return serialize_project(project)

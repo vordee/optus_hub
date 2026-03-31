@@ -96,6 +96,9 @@ export function ProjectsPage() {
     name: "",
     status: "planned",
     description: "",
+    kickoff_owner_email: "",
+    kickoff_target_date: "",
+    kickoff_notes: "",
   });
   const [taskForm, setTaskForm] = useState({
     title: "",
@@ -173,6 +176,9 @@ export function ProjectsPage() {
       name: item.name,
       status: item.status,
       description: item.description || "",
+      kickoff_owner_email: item.kickoff_owner_email || "",
+      kickoff_target_date: item.kickoff_target_date || "",
+      kickoff_notes: item.kickoff_notes || "",
     });
     void loadDetail(item.id);
   }
@@ -203,6 +209,9 @@ export function ProjectsPage() {
       name: form.name,
       status: form.status,
       description: form.description || null,
+      kickoff_owner_email: form.kickoff_owner_email || null,
+      kickoff_target_date: form.kickoff_target_date || null,
+      kickoff_notes: form.kickoff_notes || null,
     };
 
     try {
@@ -218,6 +227,9 @@ export function ProjectsPage() {
             name: payload.name,
             status: payload.status,
             description: payload.description,
+            kickoff_owner_email: payload.kickoff_owner_email,
+            kickoff_target_date: payload.kickoff_target_date,
+            kickoff_notes: payload.kickoff_notes,
           }),
         });
       }
@@ -241,6 +253,12 @@ export function ProjectsPage() {
     try {
       await apiRequest(`/v1/projects/from-opportunity/${form.opportunity_id}`, {
         method: "POST",
+        body: JSON.stringify({
+          project_name: form.name || null,
+          kickoff_owner_email: form.kickoff_owner_email || null,
+          kickoff_target_date: form.kickoff_target_date || null,
+          kickoff_notes: form.kickoff_notes || null,
+        }),
       });
       resetForm();
       await load();
@@ -262,6 +280,9 @@ export function ProjectsPage() {
       name: "",
       status: "planned",
       description: "",
+      kickoff_owner_email: "",
+      kickoff_target_date: "",
+      kickoff_notes: "",
     });
     setTaskForm({
       title: "",
@@ -505,6 +526,33 @@ export function ProjectsPage() {
             />
           </label>
 
+          <div className="task-form-grid">
+            <label className="field">
+              <span>Responsável kickoff</span>
+              <input
+                value={form.kickoff_owner_email}
+                onChange={(event) => setForm((current) => ({ ...current, kickoff_owner_email: event.target.value }))}
+                placeholder="pm@optus.com"
+              />
+            </label>
+            <label className="field">
+              <span>Data alvo kickoff</span>
+              <input
+                type="date"
+                value={form.kickoff_target_date}
+                onChange={(event) => setForm((current) => ({ ...current, kickoff_target_date: event.target.value }))}
+              />
+            </label>
+            <label className="field field-span-2">
+              <span>Notas de kickoff</span>
+              <input
+                value={form.kickoff_notes}
+                onChange={(event) => setForm((current) => ({ ...current, kickoff_notes: event.target.value }))}
+                placeholder="Alinhamento inicial, escopo, riscos e responsáveis"
+              />
+            </label>
+          </div>
+
           <div className="form-actions">
             <button className="primary-button" disabled={submitting} type="submit">
               {submitting ? "Salvando..." : selectedId === null ? "Criar projeto" : "Atualizar projeto"}
@@ -555,6 +603,20 @@ export function ProjectsPage() {
                   <span>{formatDateTime(selectedDetail.created_at)}</span>
                 </div>
                 <p>{selectedDetail.description || "Sem descrição."}</p>
+              </div>
+
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Kickoff</span>
+                  <h3>Responsabilidade inicial</h3>
+                </div>
+                <div className="kickoff-card">
+                  <div className="detail-meta detail-meta-dense">
+                    <span>{selectedDetail.kickoff_owner_email || "Sem responsável"}</span>
+                    <span>{formatDateOnly(selectedDetail.kickoff_target_date)}</span>
+                  </div>
+                  <p>{selectedDetail.kickoff_notes || "Sem notas iniciais de kickoff."}</p>
+                </div>
               </div>
 
               <div className="project-metrics">

@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from datetime import date
+
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,6 +29,9 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="planned", index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    kickoff_owner_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    kickoff_target_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    kickoff_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
     opportunity: Mapped[Optional["Opportunity"]] = relationship(back_populates="projects", lazy="joined")
     company: Mapped[Optional["Company"]] = relationship(back_populates="projects", lazy="joined")

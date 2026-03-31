@@ -16,6 +16,21 @@ function formatStatusLabel(status: string) {
   return OPPORTUNITY_STATUS_LABELS[status] || status;
 }
 
+function formatDateOnly(value: string | null) {
+  if (!value) {
+    return "Sem data";
+  }
+  const parsed = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
 export function OpportunitiesPage() {
   const [items, setItems] = useState<OpportunityItem[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
@@ -28,6 +43,12 @@ export function OpportunitiesPage() {
   const [total, setTotal] = useState(0);
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
+  const [kickoffForm, setKickoffForm] = useState({
+    project_name: "",
+    kickoff_owner_email: "",
+    kickoff_target_date: "",
+    kickoff_notes: "",
+  });
   const [form, setForm] = useState({
     lead_id: "",
     title: "",
@@ -95,6 +116,12 @@ export function OpportunitiesPage() {
     try {
       await apiRequest(`/v1/crm/opportunities/${selectedId}/kickoff`, {
         method: "POST",
+        body: JSON.stringify({
+          project_name: kickoffForm.project_name || null,
+          kickoff_owner_email: kickoffForm.kickoff_owner_email || null,
+          kickoff_target_date: kickoffForm.kickoff_target_date || null,
+          kickoff_notes: kickoffForm.kickoff_notes || null,
+        }),
       });
       await load();
       await loadDetail(selectedId);
@@ -113,6 +140,12 @@ export function OpportunitiesPage() {
       description: item.description || "",
       status: item.status,
       amount: item.amount !== null ? String(item.amount) : "",
+    });
+    setKickoffForm({
+      project_name: item.title,
+      kickoff_owner_email: "",
+      kickoff_target_date: "",
+      kickoff_notes: "",
     });
     void loadDetail(item.id);
   }
@@ -350,6 +383,8 @@ export function OpportunitiesPage() {
                     <div className="detail-meta detail-meta-dense">
                       <span>Projeto #{selectedDetail.linked_project.id}</span>
                       <span>Status {selectedDetail.linked_project.status}</span>
+                      <span>{selectedDetail.linked_project.kickoff_owner_email || "Sem responsável"}</span>
+                      <span>{formatDateOnly(selectedDetail.linked_project.kickoff_target_date)}</span>
                     </div>
                   </>
                 ) : selectedDetail.can_open_project ? (
@@ -357,6 +392,39 @@ export function OpportunitiesPage() {
                     <div>
                       <strong>Oportunidade pronta para kickoff</strong>
                       <p>Negócio ganho sem projeto operacional aberto. Use a ação abaixo para iniciar a entrega.</p>
+                    </div>
+                    <div className="task-form-grid">
+                      <label className="field">
+                        <span>Nome do projeto</span>
+                        <input
+                          value={kickoffForm.project_name}
+                          onChange={(event) => setKickoffForm((current) => ({ ...current, project_name: event.target.value }))}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Responsável</span>
+                        <input
+                          value={kickoffForm.kickoff_owner_email}
+                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_owner_email: event.target.value }))}
+                          placeholder="pm@optus.com"
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Data alvo</span>
+                        <input
+                          value={kickoffForm.kickoff_target_date}
+                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_target_date: event.target.value }))}
+                          type="date"
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Notas iniciais</span>
+                        <input
+                          value={kickoffForm.kickoff_notes}
+                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_notes: event.target.value }))}
+                          placeholder="Primeiro alinhamento com operação"
+                        />
+                      </label>
                     </div>
                     <button className="primary-button" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
                       {kickoffSubmitting ? "Abrindo projeto..." : "Abrir projeto"}

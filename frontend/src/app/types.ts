@@ -128,6 +128,8 @@ export interface OpportunityDetailItem extends OpportunityItem {
     id: number;
     name: string;
     status: string;
+    kickoff_owner_email: string | null;
+    kickoff_target_date: string | null;
   } | null;
   can_open_project: boolean;
 }
@@ -142,6 +144,9 @@ export interface ProjectItem {
   name: string;
   status: string;
   description: string | null;
+  kickoff_owner_email: string | null;
+  kickoff_target_date: string | null;
+  kickoff_notes: string | null;
   created_at: string;
 }
 
