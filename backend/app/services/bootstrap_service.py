@@ -18,10 +18,10 @@ DEFAULT_PERMISSIONS = {
     "opportunities:write": "Criar e gerenciar oportunidades.",
     "projects:read": "Listar projetos.",
     "projects:write": "Criar e gerenciar projetos.",
-    "users:read": "Listar usuarios.",
-    "users:write": "Criar e gerenciar usuarios.",
-    "roles:read": "Listar papeis.",
-    "roles:write": "Criar e gerenciar papeis.",
+    "users:read": "Listar usuários.",
+    "users:write": "Criar e gerenciar usuários.",
+    "roles:read": "Listar papéis.",
+    "roles:write": "Criar e gerenciar papéis.",
 }
 
 
@@ -46,6 +46,8 @@ class BootstrapService:
             permission = self.permission_repository.get_by_code(code)
             if permission is None:
                 permission = self.permission_repository.create(code=code, description=description)
+            elif permission.description != description:
+                permission.description = description
             items.append(permission)
         return items
 

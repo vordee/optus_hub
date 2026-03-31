@@ -9,6 +9,7 @@ User=optushub
 Group=optushub
 WorkingDirectory=/opt/optus_hub/backend
 EnvironmentFile=/opt/optus_hub/backend/.env
+Environment=TZ=America/Cuiaba
 ExecStart=/opt/optus_hub/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
