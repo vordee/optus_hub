@@ -8,6 +8,7 @@
 - PostgreSQL local e nao exposto externamente
 - bootstrap admin desativado no `.env`
 - rate limiting e headers defensivos no `nginx`
+- HTTPS publicado via `nginx`
 - unit file do backend com restricoes basicas de `systemd`
 - `.env` com permissao `640` e grupo `optushub`
 
@@ -20,7 +21,7 @@
 
 ## Proximos endurecimentos recomendados
 
-- trocar HTTP por HTTPS com certificado valido
+- trocar certificado autoassinado por certificado valido
 - definir politica de rotacao de segredo da API
 - adicionar logs de autenticacao e eventos sensiveis
 - substituir bootstrap admin por fluxo administrativo real

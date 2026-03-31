@@ -19,7 +19,7 @@ Primeira implantacao validada em Oracle Linux 9.7 no host `10.222.222.33`.
 
 - app root: `/opt/optus_hub`
 - backend service: `optus-hub-api`
-- nginx publicado em `80/tcp`
+- nginx publicado em `80/tcp` e `443/tcp`
 - PostgreSQL local para o backend
 
 ## Observacao
