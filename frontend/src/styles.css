@@ -274,6 +274,21 @@ textarea {
   overflow: auto;
 }
 
+.table-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.table-summary span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(141, 197, 61, 0.1);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -293,6 +308,10 @@ tbody tr {
 
 tbody tr:hover {
   background: rgba(141, 197, 61, 0.06);
+}
+
+tbody tr.selected-row {
+  background: rgba(141, 197, 61, 0.12);
 }
 
 .form-card {
@@ -356,6 +375,65 @@ tbody tr:hover {
   border-top: 1px solid var(--line);
 }
 
+.detail-hero {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(240, 247, 231, 0.84)),
+    rgba(255, 255, 255, 0.72);
+}
+
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-source {
+  background: rgba(17, 19, 23, 0.08);
+}
+
+.detail-meta-dense {
+  gap: 8px;
+}
+
+.detail-meta-dense span {
+  padding: 6px 10px;
+}
+
+.project-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.project-metrics .metric-card {
+  display: grid;
+  gap: 4px;
+  min-height: 104px;
+}
+
+.project-metrics .metric-card small {
+  color: var(--text-soft);
+}
+
+.crm-summary-grid,
+.crm-context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.crm-summary-grid .metric-card,
+.crm-context-grid .metric-card {
+  min-height: 104px;
+}
+
 .detail-section {
   margin-top: 18px;
 }
@@ -371,6 +449,8 @@ tbody tr:hover {
   border-radius: 18px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.72);
+  display: grid;
+  gap: 12px;
 }
 
 .phase-card-head {
@@ -378,6 +458,46 @@ tbody tr:hover {
   justify-content: space-between;
   align-items: start;
   gap: 12px;
+}
+
+.phase-copy {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+.phase-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.phase-task-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(141, 197, 61, 0.08);
+}
+
+.phase-task-list strong {
+  font-size: 14px;
+}
+
+.phase-task-list span,
+.phase-task-empty {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.phase-card-backlog {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(232, 238, 226, 0.84)),
+    rgba(255, 255, 255, 0.72);
 }
 
 .detail-meta {
@@ -409,6 +529,27 @@ tbody tr:hover {
   border-radius: 16px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.history-list-timeline li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.history-list-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent-dark);
+  box-shadow: 0 0 0 4px rgba(141, 197, 61, 0.16);
+}
+
+.history-list li span {
+  color: var(--text-soft);
 }
 
 .check-field {
@@ -613,6 +754,10 @@ tbody tr:hover {
   background: rgba(17, 19, 23, 0.12);
 }
 
+.status-pill.status-done {
+  background: rgba(17, 19, 23, 0.12);
+}
+
 .status-pill.status-task-pending {
   background: rgba(141, 197, 61, 0.14);
 }
@@ -651,10 +796,42 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  .project-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .crm-summary-grid,
+  .crm-context-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .phase-grid,
   .task-form-grid,
   .task-item {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 720px) {
+  .toolbar,
+  .pager,
+  .task-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .project-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-summary-grid,
+  .crm-context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-task-list li,
+  .detail-meta {
+    align-items: start;
   }
 }

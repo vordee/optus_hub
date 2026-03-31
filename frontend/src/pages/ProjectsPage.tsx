@@ -17,6 +17,62 @@ import type {
 const PROJECT_STATUSES = ["planned", "active", "on_hold", "completed"];
 const PROJECT_TASK_STATUSES = ["pending", "in_progress", "done", "blocked"];
 const PAGE_SIZE = 8;
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  planned: "Planejado",
+  active: "Em andamento",
+  on_hold: "Em pausa",
+  completed: "Concluído",
+};
+const PROJECT_TASK_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente",
+  in_progress: "Em execução",
+  done: "Concluída",
+  blocked: "Bloqueada",
+};
+const PHASE_STATUS_LABELS: Record<string, string> = {
+  planned: "Planejada",
+  active: "Em andamento",
+  on_hold: "Em pausa",
+  completed: "Concluída",
+  done: "Concluída",
+};
+const DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function formatStatusLabel(status: string, labels: Record<string, string>) {
+  return labels[status] || status;
+}
+
+function formatDateOnly(value: string | null) {
+  if (!value) {
+    return "Sem prazo";
+  }
+
+  const parsed = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return DATE_FORMATTER.format(parsed);
+}
+
+function isTaskOverdue(task: ProjectTaskItem) {
+  if (!task.due_date || task.status === "done") {
+    return false;
+  }
+
+  const dueDate = new Date(`${task.due_date}T23:59:59`);
+  if (Number.isNaN(dueDate.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return dueDate < today;
+}
 
 export function ProjectsPage() {
   const [items, setItems] = useState<ProjectItem[]>([]);
@@ -50,6 +106,37 @@ export function ProjectsPage() {
     due_date: "",
   });
 
+  const tasksByPhaseId = new Map<number, ProjectTaskItem[]>();
+  for (const task of tasks) {
+    if (task.project_phase_id === null) {
+      continue;
+    }
+
+    const current = tasksByPhaseId.get(task.project_phase_id) || [];
+    current.push(task);
+    tasksByPhaseId.set(task.project_phase_id, current);
+  }
+
+  const unassignedTasks = tasks.filter((task) => task.project_phase_id === null);
+  const taskStats = {
+    total: tasks.length,
+    pending: tasks.filter((task) => task.status === "pending").length,
+    inProgress: tasks.filter((task) => task.status === "in_progress").length,
+    blocked: tasks.filter((task) => task.status === "blocked").length,
+    done: tasks.filter((task) => task.status === "done").length,
+    overdue: tasks.filter(isTaskOverdue).length,
+  };
+  const phaseStats = selectedDetail
+    ? {
+        total: selectedDetail.phases.length,
+        completed: selectedDetail.phases.filter(
+          (phase) => phase.status === "completed" || phase.completed_at !== null,
+        ).length,
+      }
+    : null;
+  const selectedProgress =
+    phaseStats && phaseStats.total > 0 ? Math.round((phaseStats.completed / phaseStats.total) * 100) : 0;
+
   useEffect(() => {
     void load();
   }, [page, query, filterStatus]);
@@ -58,6 +145,7 @@ export function ProjectsPage() {
 
   async function load() {
     try {
+      setError(null);
       const [projectResponse, companyItems, contactItems, opportunityResponse] = await Promise.all([
         apiRequest<ProjectListResponse>(
           `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
@@ -91,6 +179,7 @@ export function ProjectsPage() {
 
   async function loadDetail(projectId: number) {
     try {
+      setError(null);
       const [detail, taskItems] = await Promise.all([
         apiRequest<ProjectDetailItem>(`/v1/projects/${projectId}`),
         apiRequest<ProjectTaskItem[]>(`/v1/projects/${projectId}/tasks`),
@@ -269,10 +358,16 @@ export function ProjectsPage() {
             <option value="">Todos os status</option>
             {PROJECT_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {status}
+                {formatStatusLabel(status, PROJECT_STATUS_LABELS)}
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="table-summary">
+          <span>{total} projetos encontrados</span>
+          <span>{filterStatus ? `Filtro: ${formatStatusLabel(filterStatus, PROJECT_STATUS_LABELS)}` : "Todos os status"}</span>
+          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
 
         <div className="table-wrap">
@@ -292,7 +387,11 @@ export function ProjectsPage() {
                   <td>{item.name}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>
-                  <td><span className={`status-pill status-${item.status}`}>{item.status}</span></td>
+                  <td>
+                    <span className={`status-pill status-${item.status}`}>
+                      {formatStatusLabel(item.status, PROJECT_STATUS_LABELS)}
+                    </span>
+                  </td>
                   <td>{item.opportunity_id ? `Oportunidade #${item.opportunity_id}` : "Manual"}</td>
                 </tr>
               ))}
@@ -392,7 +491,7 @@ export function ProjectsPage() {
             >
               {PROJECT_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {formatStatusLabel(status, PROJECT_STATUS_LABELS)}
                 </option>
               ))}
             </select>
@@ -441,12 +540,52 @@ export function ProjectsPage() {
           </div>
           {selectedDetail ? (
             <>
-              <div className="detail-meta">
-                <span>{selectedDetail.company_name || "Sem empresa"}</span>
-                <span>{selectedDetail.contact_name || "Sem contato"}</span>
-                <span>{formatDateTime(selectedDetail.created_at)}</span>
+              <div className="detail-hero">
+                <div className="detail-badges">
+                  <span className={`status-pill status-${selectedDetail.status}`}>
+                    {formatStatusLabel(selectedDetail.status, PROJECT_STATUS_LABELS)}
+                  </span>
+                  <span className="status-pill detail-source">
+                    {selectedDetail.opportunity_id ? `Funil #${selectedDetail.opportunity_id}` : "Cadastro manual"}
+                  </span>
+                </div>
+                <div className="detail-meta detail-meta-dense">
+                  <span>{selectedDetail.company_name || "Sem empresa"}</span>
+                  <span>{selectedDetail.contact_name || "Sem contato"}</span>
+                  <span>{formatDateTime(selectedDetail.created_at)}</span>
+                </div>
+                <p>{selectedDetail.description || "Sem descrição."}</p>
               </div>
-              <p>{selectedDetail.description || "Sem descrição."}</p>
+
+              <div className="project-metrics">
+                <div className="metric-card">
+                  <span>Fases</span>
+                  <strong>{phaseStats ? `${phaseStats.completed}/${phaseStats.total}` : "0/0"}</strong>
+                  <small>{selectedProgress}% concluído</small>
+                </div>
+                <div className="metric-card">
+                  <span>Tarefas</span>
+                  <strong>{taskStats.total}</strong>
+                  <small>{taskStats.pending} pendentes</small>
+                </div>
+                <div className="metric-card">
+                  <span>Execução</span>
+                  <strong>{taskStats.inProgress + taskStats.blocked}</strong>
+                  <small>{taskStats.blocked} bloqueadas</small>
+                </div>
+                <div className="metric-card">
+                  <span>Risco</span>
+                  <strong>{taskStats.overdue}</strong>
+                  <small>{taskStats.done} concluídas</small>
+                </div>
+              </div>
+
+              <div className="detail-meta">
+                <span>{selectedDetail.phases.length} fase(s)</span>
+                <span>{taskStats.total} tarefa(s)</span>
+                <span>{unassignedTasks.length} sem fase</span>
+                <span>{selectedDetail.history.length} evento(s) de histórico</span>
+              </div>
               <div className="detail-section">
                 <div className="section-heading">
                   <span className="eyebrow">Fases</span>
@@ -457,9 +596,32 @@ export function ProjectsPage() {
                     <PhaseCard
                       key={phase.id}
                       phase={phase}
-                      tasks={tasks.filter((task) => task.project_phase_id === phase.id)}
+                      tasks={tasksByPhaseId.get(phase.id) || []}
                     />
                   ))}
+                  <article className="phase-card phase-card-backlog">
+                    <div className="phase-card-head">
+                      <div>
+                        <span className="eyebrow">Backlog</span>
+                        <h3>Tarefas sem fase</h3>
+                      </div>
+                      <span className="status-pill">{unassignedTasks.length}</span>
+                    </div>
+                    <p className="phase-copy">
+                      {unassignedTasks.length === 0
+                        ? "Nenhuma tarefa fora da sequência operacional."
+                        : "Agrupa itens em espera antes do encaixe definitivo na execução."}
+                    </p>
+                    <ul className="phase-task-list">
+                      {unassignedTasks.slice(0, 3).map((task) => (
+                        <li key={task.id}>
+                          <strong>{task.title}</strong>
+                          <span>{formatStatusLabel(task.status, PROJECT_TASK_STATUS_LABELS)}</span>
+                        </li>
+                      ))}
+                      {unassignedTasks.length === 0 && <li className="phase-task-empty">Sem pendências fora de fase.</li>}
+                    </ul>
+                  </article>
                 </div>
               </div>
               <div className="detail-section">
@@ -507,7 +669,7 @@ export function ProjectsPage() {
                       >
                         {PROJECT_TASK_STATUSES.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {formatStatusLabel(status, PROJECT_TASK_STATUS_LABELS)}
                           </option>
                         ))}
                       </select>
@@ -545,19 +707,21 @@ export function ProjectsPage() {
                         <div className="detail-meta">
                           <span>{task.project_phase_name || "Sem fase"}</span>
                           <span>{task.assigned_to_email || "Sem responsável"}</span>
-                          <span>{task.due_date || "Sem prazo"}</span>
+                          <span>{formatDateOnly(task.due_date)}</span>
                           <span>{formatDateTime(task.created_at)}</span>
                         </div>
                       </div>
                       <div className="task-item-actions">
-                        <span className={`status-pill status-task-${task.status}`}>{task.status}</span>
+                        <span className={`status-pill status-task-${task.status}`}>
+                          {formatStatusLabel(task.status, PROJECT_TASK_STATUS_LABELS)}
+                        </span>
                         <select
                           value={task.status}
                           onChange={(event) => void updateTaskStatus(task.id, event.target.value)}
                         >
                           {PROJECT_TASK_STATUSES.map((status) => (
                             <option key={status} value={status}>
-                              {status}
+                              {formatStatusLabel(status, PROJECT_TASK_STATUS_LABELS)}
                             </option>
                           ))}
                         </select>
@@ -571,7 +735,8 @@ export function ProjectsPage() {
                 {selectedDetail.history.map((entry) => (
                   <li key={entry.id}>
                     <strong>
-                      {entry.from_status || "inicial"} → {entry.to_status}
+                      {formatStatusLabel(entry.from_status || "inicial", PROJECT_STATUS_LABELS)} →{" "}
+                      {formatStatusLabel(entry.to_status, PROJECT_STATUS_LABELS)}
                     </strong>
                     <span>{entry.changed_by_email || "-"}</span>
                     <small>{formatDateTime(entry.changed_at)}</small>
@@ -595,8 +760,6 @@ function PhaseCard({
   phase: ProjectPhaseItem;
   tasks: ProjectTaskItem[];
 }) {
-  const phaseStatusClass = phase.status === "completed" ? "done" : phase.status;
-
   return (
     <article className="phase-card">
       <div className="phase-card-head">
@@ -604,12 +767,25 @@ function PhaseCard({
           <span className="eyebrow">Fase {phase.sequence}</span>
           <h3>{phase.name}</h3>
         </div>
-        <span className={`status-pill status-task-${phaseStatusClass}`}>{phase.status}</span>
+        <span className={`status-pill status-${phase.status}`}>
+          {formatStatusLabel(phase.status, PHASE_STATUS_LABELS)}
+        </span>
       </div>
-      <div className="detail-meta">
+      <div className="detail-meta detail-meta-dense">
         <span>{tasks.length} tarefa(s)</span>
-        <span>{phase.started_at ? formatDateTime(phase.started_at) : "Não iniciada"}</span>
+        <span>{phase.started_at ? `Início ${formatDateOnly(phase.started_at)}` : "Não iniciada"}</span>
+        <span>{phase.completed_at ? `Fim ${formatDateOnly(phase.completed_at)}` : "Em aberto"}</span>
       </div>
+      {phase.notes && <p className="phase-copy">{phase.notes}</p>}
+      <ul className="phase-task-list">
+        {tasks.slice(0, 3).map((task) => (
+          <li key={task.id}>
+            <strong>{task.title}</strong>
+            <span>{formatStatusLabel(task.status, PROJECT_TASK_STATUS_LABELS)}</span>
+          </li>
+        ))}
+        {tasks.length === 0 && <li className="phase-task-empty">Sem tarefas nessa fase.</li>}
+      </ul>
     </article>
   );
 }

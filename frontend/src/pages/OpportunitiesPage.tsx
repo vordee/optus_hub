@@ -5,6 +5,16 @@ import { formatCurrency, formatDateTime } from "../app/format";
 import type { LeadItem, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
 
 const OPPORTUNITY_STATUSES = ["open", "proposal", "won", "lost"];
+const OPPORTUNITY_STATUS_LABELS: Record<string, string> = {
+  open: "Aberta",
+  proposal: "Proposta",
+  won: "Ganha",
+  lost: "Perdida",
+};
+
+function formatStatusLabel(status: string) {
+  return OPPORTUNITY_STATUS_LABELS[status] || status;
+}
 
 export function OpportunitiesPage() {
   const [items, setItems] = useState<OpportunityItem[]>([]);
@@ -24,6 +34,13 @@ export function OpportunitiesPage() {
     status: "open",
     amount: "",
   });
+  const amountTotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const statusStats = {
+    open: items.filter((item) => item.status === "open").length,
+    proposal: items.filter((item) => item.status === "proposal").length,
+    won: items.filter((item) => item.status === "won").length,
+    lost: items.filter((item) => item.status === "lost").length,
+  };
 
   useEffect(() => {
     void load();
@@ -31,6 +48,7 @@ export function OpportunitiesPage() {
 
   async function load() {
     try {
+      setError(null);
       const [response, leadItems] = await Promise.all([
         apiRequest<OpportunityListResponse>(
           `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
@@ -80,6 +98,7 @@ export function OpportunitiesPage() {
 
   async function loadDetail(opportunityId: number) {
     try {
+      setError(null);
       setSelectedDetail(await apiRequest<OpportunityDetailItem>(`/v1/crm/opportunities/${opportunityId}`));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe da oportunidade.");
@@ -132,10 +151,37 @@ export function OpportunitiesPage() {
             <option value="">Todos os status</option>
             {OPPORTUNITY_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {status}
+                {formatStatusLabel(status)}
               </option>
             ))}
           </select>
+        </div>
+        <div className="crm-summary-grid">
+          <div className="metric-card">
+            <span>Abertas</span>
+            <strong>{statusStats.open}</strong>
+            <small>trabalhando descoberta</small>
+          </div>
+          <div className="metric-card">
+            <span>Em proposta</span>
+            <strong>{statusStats.proposal}</strong>
+            <small>negociação ativa</small>
+          </div>
+          <div className="metric-card">
+            <span>Ganhas</span>
+            <strong>{statusStats.won}</strong>
+            <small>entrada para projetos</small>
+          </div>
+          <div className="metric-card">
+            <span>Valor listado</span>
+            <strong>{formatCurrency(amountTotal)}</strong>
+            <small>somatório da página</small>
+          </div>
+        </div>
+        <div className="table-summary">
+          <span>{total} oportunidades encontradas</span>
+          <span>{filterStatus ? `Filtro: ${formatStatusLabel(filterStatus)}` : "Todos os status"}</span>
+          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -149,10 +195,14 @@ export function OpportunitiesPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} onClick={() => populate(item)}>
+                <tr
+                  key={item.id}
+                  className={selectedId === item.id ? "selected-row" : ""}
+                  onClick={() => populate(item)}
+                >
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
-                  <td>{item.status}</td>
+                  <td><span className={`status-pill status-${item.status}`}>{formatStatusLabel(item.status)}</span></td>
                   <td>{formatCurrency(item.amount)}</td>
                 </tr>
               ))}
@@ -226,12 +276,44 @@ export function OpportunitiesPage() {
         </form>
         {selectedDetail && (
           <div className="detail-panel">
-            <div className="section-heading">
-              <span className="eyebrow">Detalhe</span>
-              <h3>{selectedDetail.title}</h3>
+            <div className="detail-hero">
+              <div className="detail-badges">
+                <span className={`status-pill status-${selectedDetail.status}`}>{formatStatusLabel(selectedDetail.status)}</span>
+                <span className="status-pill detail-source">{selectedDetail.lead_id ? `Lead #${selectedDetail.lead_id}` : "Sem lead"}</span>
+              </div>
+              <div className="section-heading">
+                <span className="eyebrow">Deal selecionado</span>
+                <h3>{selectedDetail.title}</h3>
+              </div>
+              <div className="detail-meta detail-meta-dense">
+                <span>{selectedDetail.company_name || "Sem empresa"}</span>
+                <span>{selectedDetail.contact_name || "Sem contato"}</span>
+                <span>{formatDateTime(selectedDetail.created_at)}</span>
+              </div>
+              <p>{selectedDetail.description || "Sem descrição."}</p>
             </div>
-            <p>{selectedDetail.description || "Sem descrição."}</p>
-            <p><strong>Valor:</strong> {formatCurrency(selectedDetail.amount)}</p>
+            <div className="crm-context-grid">
+              <div className="metric-card">
+                <span>Valor</span>
+                <strong>{formatCurrency(selectedDetail.amount)}</strong>
+                <small>estimativa comercial atual</small>
+              </div>
+              <div className="metric-card">
+                <span>Próximos passos</span>
+                <strong>{selectedDetail.next_statuses.length}</strong>
+                <small>transições permitidas</small>
+              </div>
+              <div className="metric-card">
+                <span>Histórico</span>
+                <strong>{selectedDetail.history.length}</strong>
+                <small>mudanças registradas</small>
+              </div>
+              <div className="metric-card">
+                <span>Lead</span>
+                <strong>{selectedDetail.lead_id || "-"}</strong>
+                <small>origem do negócio</small>
+              </div>
+            </div>
             <div className="detail-section">
               <div className="section-heading">
                 <span className="eyebrow">Ações</span>
@@ -253,20 +335,26 @@ export function OpportunitiesPage() {
                     onClick={() => void handleTransition(status)}
                     type="button"
                   >
-                    Ir para {status}
+                    Ir para {formatStatusLabel(status)}
                   </button>
                 ))}
               </div>
             </div>
-            <ul className="history-list">
+            <div className="detail-section">
+              <div className="section-heading">
+                <span className="eyebrow">Timeline</span>
+                <h3>Histórico comercial</h3>
+              </div>
+            <ul className="history-list history-list-timeline">
               {selectedDetail.history.map((entry) => (
                 <li key={entry.id}>
-                  <strong>{entry.from_status || "inicial"} → {entry.to_status}</strong>
-                  <span>{entry.changed_by_email || "-"}</span>
+                  <strong>{formatStatusLabel(entry.from_status || "open")} → {formatStatusLabel(entry.to_status)}</strong>
+                  <span>{entry.note || entry.changed_by_email || "-"}</span>
                   <small>{formatDateTime(entry.changed_at)}</small>
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         )}
       </article>

@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from app.schemas.company import CompanyCreateRequest
 from app.schemas.contact import ContactCreateRequest
 from app.schemas.lead import LeadCreateRequest
-from app.schemas.opportunity import OpportunityCreateRequest, OpportunityUpdateRequest
+from app.schemas.opportunity import OpportunityCreateRequest, OpportunityTransitionRequest, OpportunityUpdateRequest
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.project_phase import ProjectPhaseUpdateRequest
 from app.services.company_service import CompanyService
@@ -53,11 +53,15 @@ def test_create_project_from_won_opportunity(db_session) -> None:
     )
     opportunity_service = OpportunityService(db_session)
     opportunity = opportunity_service.create_opportunity(
-        OpportunityCreateRequest(lead_id=lead.id, title="Oportunidade vencedora", status="open")
+        OpportunityCreateRequest(lead_id=lead.id, title="Oportunidade vencedora", status="open", amount=25000)
     )
-    opportunity_service.update_opportunity(
+    opportunity_service.transition_opportunity(
         opportunity.id,
-        OpportunityUpdateRequest(status="won"),
+        OpportunityTransitionRequest(to_status="proposal", note="Proposta emitida"),
+    )
+    opportunity_service.transition_opportunity(
+        opportunity.id,
+        OpportunityTransitionRequest(to_status="won", note="Fechamento aprovado"),
     )
 
     project = ProjectService(db_session).create_from_opportunity(opportunity.id, changed_by_email="admin@example.com")

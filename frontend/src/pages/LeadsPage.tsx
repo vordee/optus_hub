@@ -5,6 +5,18 @@ import { formatDateTime } from "../app/format";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
 
 const LEAD_STATUSES = ["new", "qualified", "diagnosis", "proposal", "won", "lost"];
+const LEAD_STATUS_LABELS: Record<string, string> = {
+  new: "Novo",
+  qualified: "Qualificado",
+  diagnosis: "Diagnóstico",
+  proposal: "Proposta",
+  won: "Ganho",
+  lost: "Perdido",
+};
+
+function formatStatusLabel(status: string) {
+  return LEAD_STATUS_LABELS[status] || status;
+}
 
 export function LeadsPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
@@ -23,6 +35,12 @@ export function LeadsPage() {
     source: "",
     status: "new",
   });
+  const statusStats = {
+    new: items.filter((item) => item.status === "new").length,
+    qualified: items.filter((item) => item.status === "qualified").length,
+    proposal: items.filter((item) => item.status === "proposal").length,
+    won: items.filter((item) => item.status === "won").length,
+  };
 
   useEffect(() => {
     void load();
@@ -30,6 +48,7 @@ export function LeadsPage() {
 
   async function load() {
     try {
+      setError(null);
       const [leadResponse, contactItems] = await Promise.all([
         apiRequest<LeadListResponse>(
           `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
@@ -58,6 +77,7 @@ export function LeadsPage() {
 
   async function loadDetail(leadId: number) {
     try {
+      setError(null);
       setSelectedDetail(await apiRequest<LeadDetailItem>(`/v1/crm/leads/${leadId}`));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do lead.");
@@ -110,10 +130,37 @@ export function LeadsPage() {
             <option value="">Todos os status</option>
             {LEAD_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {status}
+                {formatStatusLabel(status)}
               </option>
             ))}
           </select>
+        </div>
+        <div className="crm-summary-grid">
+          <div className="metric-card">
+            <span>Novos</span>
+            <strong>{statusStats.new}</strong>
+            <small>entrada recente da página</small>
+          </div>
+          <div className="metric-card">
+            <span>Qualificados</span>
+            <strong>{statusStats.qualified}</strong>
+            <small>prontos para diagnóstico</small>
+          </div>
+          <div className="metric-card">
+            <span>Em proposta</span>
+            <strong>{statusStats.proposal}</strong>
+            <small>negociação ativa</small>
+          </div>
+          <div className="metric-card">
+            <span>Ganhos</span>
+            <strong>{statusStats.won}</strong>
+            <small>conversão no recorte atual</small>
+          </div>
+        </div>
+        <div className="table-summary">
+          <span>{total} leads encontrados</span>
+          <span>{filterStatus ? `Filtro: ${formatStatusLabel(filterStatus)}` : "Todos os status"}</span>
+          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -127,11 +174,15 @@ export function LeadsPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} onClick={() => populate(item)}>
+                <tr
+                  key={item.id}
+                  className={selectedId === item.id ? "selected-row" : ""}
+                  onClick={() => populate(item)}
+                >
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>
-                  <td>{item.status}</td>
+                  <td><span className={`status-pill status-${item.status}`}>{formatStatusLabel(item.status)}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -203,20 +254,59 @@ export function LeadsPage() {
         </form>
         {selectedDetail && (
           <div className="detail-panel">
-            <div className="section-heading">
-              <span className="eyebrow">Detalhe</span>
-              <h3>{selectedDetail.title}</h3>
+            <div className="detail-hero">
+              <div className="detail-badges">
+                <span className={`status-pill status-${selectedDetail.status}`}>{formatStatusLabel(selectedDetail.status)}</span>
+                <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
+              </div>
+              <div className="section-heading">
+                <span className="eyebrow">Lead selecionado</span>
+                <h3>{selectedDetail.title}</h3>
+              </div>
+              <div className="detail-meta detail-meta-dense">
+                <span>{selectedDetail.company_name || "Sem empresa"}</span>
+                <span>{selectedDetail.contact_name || "Sem contato"}</span>
+                <span>{formatDateTime(selectedDetail.created_at)}</span>
+              </div>
+              <p>{selectedDetail.description || "Sem descrição."}</p>
             </div>
-            <p>{selectedDetail.description || "Sem descrição."}</p>
-            <ul className="history-list">
+            <div className="crm-context-grid">
+              <div className="metric-card">
+                <span>Contato</span>
+                <strong>{selectedDetail.contact_name || "-"}</strong>
+                <small>vínculo principal</small>
+              </div>
+              <div className="metric-card">
+                <span>Empresa</span>
+                <strong>{selectedDetail.company_name || "-"}</strong>
+                <small>conta associada</small>
+              </div>
+              <div className="metric-card">
+                <span>Origem</span>
+                <strong>{selectedDetail.source || "-"}</strong>
+                <small>canal capturado</small>
+              </div>
+              <div className="metric-card">
+                <span>Eventos</span>
+                <strong>{selectedDetail.history.length}</strong>
+                <small>mudanças registradas</small>
+              </div>
+            </div>
+            <div className="detail-section">
+              <div className="section-heading">
+                <span className="eyebrow">Timeline</span>
+                <h3>Histórico do lead</h3>
+              </div>
+            <ul className="history-list history-list-timeline">
               {selectedDetail.history.map((entry) => (
                 <li key={entry.id}>
-                  <strong>{entry.from_status || "inicial"} → {entry.to_status}</strong>
-                  <span>{entry.changed_by_email || "-"}</span>
+                  <strong>{formatStatusLabel(entry.from_status || "new")} → {formatStatusLabel(entry.to_status)}</strong>
+                  <span>{entry.note || entry.changed_by_email || "-"}</span>
                   <small>{formatDateTime(entry.changed_at)}</small>
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         )}
       </article>
