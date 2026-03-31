@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { formatDateTime } from "../app/format";
+import { formatAuditStatus } from "../app/labels";
 import type { AuditEventItem } from "../app/types";
 
 export function AuditPage() {
@@ -47,7 +48,7 @@ export function AuditPage() {
                   <td>{formatDateTime(item.created_at)}</td>
                   <td>{item.action}</td>
                   <td>{item.actor_email || "-"}</td>
-                  <td>{item.status}</td>
+                  <td>{formatAuditStatus(item.status)}</td>
                   <td>{[item.target_type, item.target_id].filter(Boolean).join(" #") || "-"}</td>
                 </tr>
               ))}

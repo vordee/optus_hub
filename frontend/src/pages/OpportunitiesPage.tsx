@@ -2,19 +2,8 @@ import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { formatCurrency, formatDateTime } from "../app/format";
+import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
 import type { LeadItem, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
-
-const OPPORTUNITY_STATUSES = ["open", "proposal", "won", "lost"];
-const OPPORTUNITY_STATUS_LABELS: Record<string, string> = {
-  open: "Aberta",
-  proposal: "Proposta",
-  won: "Ganha",
-  lost: "Perdida",
-};
-
-function formatStatusLabel(status: string) {
-  return OPPORTUNITY_STATUS_LABELS[status] || status;
-}
 
 function formatDateOnly(value: string | null) {
   if (!value) {
@@ -43,6 +32,7 @@ export function OpportunitiesPage() {
   const [total, setTotal] = useState(0);
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
+  const [opportunityView, setOpportunityView] = useState<"painel" | "cadastro">("painel");
   const [kickoffForm, setKickoffForm] = useState({
     project_name: "",
     kickoff_owner_email: "",
@@ -63,6 +53,7 @@ export function OpportunitiesPage() {
     won: items.filter((item) => item.status === "won").length,
     lost: items.filter((item) => item.status === "lost").length,
   };
+  const selectedListItem = items.find((item) => item.id === selectedId) || null;
 
   useEffect(() => {
     void loadOpportunities();
@@ -143,6 +134,7 @@ export function OpportunitiesPage() {
 
   function populate(item: OpportunityItem) {
     setSelectedId(item.id);
+    setOpportunityView("painel");
     setForm({
       lead_id: item.lead_id ? String(item.lead_id) : "",
       title: item.title,
@@ -193,6 +185,7 @@ export function OpportunitiesPage() {
       }
       setSelectedId(null);
       setSelectedDetail(null);
+      setOpportunityView("painel");
       setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
       await loadOpportunities();
     } catch (submitError) {
@@ -206,15 +199,31 @@ export function OpportunitiesPage() {
         <div className="section-heading">
           <span className="eyebrow">CRM</span>
           <h3>Oportunidades</h3>
+          <p className="section-copy">
+            Trabalhe a carteira comercial pela lista e use o painel ao lado para conduzir o negócio aberto.
+          </p>
         </div>
         {error && <div className="inline-error">{error}</div>}
         <div className="toolbar">
-          <input placeholder="Buscar por título" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} />
-          <select value={filterStatus} onChange={(event) => { setPage(1); setFilterStatus(event.target.value); }}>
+          <input
+            placeholder="Buscar por título"
+            value={query}
+            onChange={(event) => {
+              setPage(1);
+              setQuery(event.target.value);
+            }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(event) => {
+              setPage(1);
+              setFilterStatus(event.target.value);
+            }}
+          >
             <option value="">Todos os status</option>
             {OPPORTUNITY_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {formatStatusLabel(status)}
+                {formatOpportunityStatus(status)}
               </option>
             ))}
           </select>
@@ -241,9 +250,31 @@ export function OpportunitiesPage() {
             <small>somatório da página</small>
           </div>
         </div>
+        <div className="status-board">
+          {OPPORTUNITY_STATUSES.map((status) => (
+            <button
+              key={status}
+              className={filterStatus === status ? "status-board-card active" : "status-board-card"}
+              onClick={() => {
+                setPage(1);
+                setFilterStatus((current) => (current === status ? "" : status));
+              }}
+              type="button"
+            >
+              <span>{formatOpportunityStatus(status)}</span>
+              <strong>{statusStats[status]}</strong>
+              <small>
+                {status === "open" && "entrada e descoberta"}
+                {status === "proposal" && "propostas em negociação"}
+                {status === "won" && "negócios prontos para operação"}
+                {status === "lost" && "oportunidades encerradas"}
+              </small>
+            </button>
+          ))}
+        </div>
         <div className="table-summary">
           <span>{total} oportunidades encontradas</span>
-          <span>{filterStatus ? `Filtro: ${formatStatusLabel(filterStatus)}` : "Todos os status"}</span>
+          <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
           <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
         <div className="table-wrap">
@@ -265,7 +296,9 @@ export function OpportunitiesPage() {
                 >
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
-                  <td><span className={`status-pill status-${item.status}`}>{formatStatusLabel(item.status)}</span></td>
+                  <td>
+                    <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
+                  </td>
                   <td>{formatCurrency(item.amount)}</td>
                 </tr>
               ))}
@@ -275,223 +308,300 @@ export function OpportunitiesPage() {
         <div className="pager">
           <span>{total} registros</span>
           <div className="pager-actions">
-            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
+            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
+              Anterior
+            </button>
             <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">
+              Próxima
+            </button>
           </div>
         </div>
       </article>
 
       <article className="card">
-        <form className="form-card" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Lead</span>
-            <select
-              value={form.lead_id}
-              onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
-            >
-              <option value="">Sem lead</option>
-              {leads.map((lead) => (
-                <option key={lead.id} value={lead.id}>
-                  {lead.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Título</span>
-            <input
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Descrição</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Status</span>
-            <select
-              value={form.status}
-              onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-            >
-              {OPPORTUNITY_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Valor</span>
-            <input
-              value={form.amount}
-              onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-              type="number"
-            />
-          </label>
-          <button className="primary-button" type="submit">
-            {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
+        <div className="panel-switcher">
+          <button
+            className={opportunityView === "painel" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setOpportunityView("painel")}
+            type="button"
+          >
+            Painel comercial
           </button>
-        </form>
-        {selectedDetail && (
-          <div className="detail-panel">
-            <div className="detail-hero">
-              <div className="detail-badges">
-                <span className={`status-pill status-${selectedDetail.status}`}>{formatStatusLabel(selectedDetail.status)}</span>
-                <span className="status-pill detail-source">{selectedDetail.lead_id ? `Lead #${selectedDetail.lead_id}` : "Sem lead"}</span>
+          <button
+            className={opportunityView === "cadastro" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setOpportunityView("cadastro")}
+            type="button"
+          >
+            Cadastro e edição
+          </button>
+        </div>
+
+        {opportunityView === "painel" ? (
+          selectedDetail ? (
+            <div className="detail-panel detail-panel-standalone">
+              <div className="detail-hero">
+                <div className="detail-badges">
+                  <span className={`status-pill status-${selectedDetail.status}`}>
+                    {formatOpportunityStatus(selectedDetail.status)}
+                  </span>
+                  <span className="status-pill detail-source">
+                    {selectedDetail.lead_id ? `Lead #${selectedDetail.lead_id}` : "Sem lead"}
+                  </span>
+                </div>
+                <div className="section-heading">
+                  <span className="eyebrow">Registro em trabalho</span>
+                  <h3>{selectedDetail.title}</h3>
+                </div>
+                <div className="detail-meta detail-meta-dense">
+                  <span>{selectedDetail.company_name || "Sem empresa"}</span>
+                  <span>{selectedDetail.contact_name || "Sem contato"}</span>
+                  <span>{formatDateTime(selectedDetail.created_at)}</span>
+                </div>
+                <p>{selectedDetail.description || "Sem descrição."}</p>
               </div>
-              <div className="section-heading">
-                <span className="eyebrow">Deal selecionado</span>
-                <h3>{selectedDetail.title}</h3>
+
+              <div className="record-action-bar">
+                <div className="helper-card">
+                  <strong>Próxima ação</strong>
+                  <p>
+                    {selectedDetail.next_statuses.length > 0
+                      ? `Avance o negócio para ${formatOpportunityStatus(selectedDetail.next_statuses[0])} quando a negociação estiver pronta.`
+                      : "Nenhuma transição adicional disponível para esta oportunidade."}
+                  </p>
+                </div>
+                <div className="helper-card">
+                  <strong>Contexto rápido</strong>
+                  <p>
+                    {selectedListItem?.company_name || "Sem empresa"} · {selectedListItem?.contact_name || "Sem contato"}
+                  </p>
+                </div>
               </div>
-              <div className="detail-meta detail-meta-dense">
-                <span>{selectedDetail.company_name || "Sem empresa"}</span>
-                <span>{selectedDetail.contact_name || "Sem contato"}</span>
-                <span>{formatDateTime(selectedDetail.created_at)}</span>
+
+              <div className="crm-context-grid">
+                <div className="metric-card">
+                  <span>Valor</span>
+                  <strong>{formatCurrency(selectedDetail.amount)}</strong>
+                  <small>estimativa comercial atual</small>
+                </div>
+                <div className="metric-card">
+                  <span>Próximos passos</span>
+                  <strong>{selectedDetail.next_statuses.length}</strong>
+                  <small>transições permitidas</small>
+                </div>
+                <div className="metric-card">
+                  <span>Histórico</span>
+                  <strong>{selectedDetail.history.length}</strong>
+                  <small>mudanças registradas</small>
+                </div>
+                <div className="metric-card">
+                  <span>Lead</span>
+                  <strong>{selectedDetail.lead_id || "-"}</strong>
+                  <small>origem do negócio</small>
+                </div>
               </div>
-              <p>{selectedDetail.description || "Sem descrição."}</p>
-            </div>
-            <div className="crm-context-grid">
-              <div className="metric-card">
-                <span>Valor</span>
-                <strong>{formatCurrency(selectedDetail.amount)}</strong>
-                <small>estimativa comercial atual</small>
+
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Kickoff</span>
+                  <h3>Ponte para operação</h3>
+                </div>
+                <div className="kickoff-card">
+                  {selectedDetail.linked_project ? (
+                    <>
+                      <div>
+                        <strong>{selectedDetail.linked_project.name}</strong>
+                        <p>Projeto já aberto a partir desta oportunidade.</p>
+                      </div>
+                      <div className="detail-meta detail-meta-dense">
+                        <span>Projeto #{selectedDetail.linked_project.id}</span>
+                        <span>Status {formatProjectStatus(selectedDetail.linked_project.status)}</span>
+                        <span>{selectedDetail.linked_project.kickoff_owner_email || "Sem responsável"}</span>
+                        <span>{formatDateOnly(selectedDetail.linked_project.kickoff_target_date)}</span>
+                      </div>
+                    </>
+                  ) : selectedDetail.can_open_project ? (
+                    <>
+                      <div>
+                        <strong>Oportunidade pronta para kickoff</strong>
+                        <p>Negócio ganho sem projeto operacional aberto. Use a ação abaixo para iniciar a entrega.</p>
+                      </div>
+                      <div className="task-form-grid task-form-grid-2">
+                        <label className="field">
+                          <span>Nome do projeto</span>
+                          <input
+                            value={kickoffForm.project_name}
+                            onChange={(event) => setKickoffForm((current) => ({ ...current, project_name: event.target.value }))}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Responsável</span>
+                          <input
+                            value={kickoffForm.kickoff_owner_email}
+                            onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_owner_email: event.target.value }))}
+                            placeholder="pm@optus.com"
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Data alvo</span>
+                          <input
+                            value={kickoffForm.kickoff_target_date}
+                            onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_target_date: event.target.value }))}
+                            type="date"
+                          />
+                        </label>
+                        <label className="field">
+                          <span>Notas iniciais</span>
+                          <input
+                            value={kickoffForm.kickoff_notes}
+                            onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_notes: event.target.value }))}
+                            placeholder="Primeiro alinhamento com operação"
+                          />
+                        </label>
+                      </div>
+                      <button className="primary-button" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
+                        {kickoffSubmitting ? "Abrindo projeto..." : "Abrir projeto"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <strong>Kickoff ainda indisponível</strong>
+                        <p>O projeto operacional só pode ser aberto quando a oportunidade estiver em status ganho.</p>
+                      </div>
+                      <span className="status-pill">Aguardando ganho</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="metric-card">
-                <span>Próximos passos</span>
-                <strong>{selectedDetail.next_statuses.length}</strong>
-                <small>transições permitidas</small>
-              </div>
-              <div className="metric-card">
-                <span>Histórico</span>
-                <strong>{selectedDetail.history.length}</strong>
-                <small>mudanças registradas</small>
-              </div>
-              <div className="metric-card">
-                <span>Lead</span>
-                <strong>{selectedDetail.lead_id || "-"}</strong>
-                <small>origem do negócio</small>
-              </div>
-            </div>
-            <div className="detail-section">
-              <div className="section-heading">
-                <span className="eyebrow">Kickoff</span>
-                <h3>Ponte para operação</h3>
-              </div>
-              <div className="kickoff-card">
-                {selectedDetail.linked_project ? (
-                  <>
-                    <div>
-                      <strong>{selectedDetail.linked_project.name}</strong>
-                      <p>Projeto já aberto a partir desta oportunidade.</p>
-                    </div>
-                    <div className="detail-meta detail-meta-dense">
-                      <span>Projeto #{selectedDetail.linked_project.id}</span>
-                      <span>Status {selectedDetail.linked_project.status}</span>
-                      <span>{selectedDetail.linked_project.kickoff_owner_email || "Sem responsável"}</span>
-                      <span>{formatDateOnly(selectedDetail.linked_project.kickoff_target_date)}</span>
-                    </div>
-                  </>
-                ) : selectedDetail.can_open_project ? (
-                  <>
-                    <div>
-                      <strong>Oportunidade pronta para kickoff</strong>
-                      <p>Negócio ganho sem projeto operacional aberto. Use a ação abaixo para iniciar a entrega.</p>
-                    </div>
-                    <div className="task-form-grid">
-                      <label className="field">
-                        <span>Nome do projeto</span>
-                        <input
-                          value={kickoffForm.project_name}
-                          onChange={(event) => setKickoffForm((current) => ({ ...current, project_name: event.target.value }))}
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Responsável</span>
-                        <input
-                          value={kickoffForm.kickoff_owner_email}
-                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_owner_email: event.target.value }))}
-                          placeholder="pm@optus.com"
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Data alvo</span>
-                        <input
-                          value={kickoffForm.kickoff_target_date}
-                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_target_date: event.target.value }))}
-                          type="date"
-                        />
-                      </label>
-                      <label className="field">
-                        <span>Notas iniciais</span>
-                        <input
-                          value={kickoffForm.kickoff_notes}
-                          onChange={(event) => setKickoffForm((current) => ({ ...current, kickoff_notes: event.target.value }))}
-                          placeholder="Primeiro alinhamento com operação"
-                        />
-                      </label>
-                    </div>
-                    <button className="primary-button" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
-                      {kickoffSubmitting ? "Abrindo projeto..." : "Abrir projeto"}
+
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Ações</span>
+                  <h3>Fluxo comercial guiado</h3>
+                </div>
+                <label className="field">
+                  <span>Nota da transição</span>
+                  <textarea
+                    value={transitionNote}
+                    onChange={(event) => setTransitionNote(event.target.value)}
+                    placeholder="Motivo do avanço, perda ou retorno de etapa"
+                  />
+                </label>
+                <div className="form-actions">
+                  {selectedDetail.next_statuses.map((status) => (
+                    <button
+                      key={status}
+                      className="ghost-button"
+                      onClick={() => void handleTransition(status)}
+                      type="button"
+                    >
+                      Ir para {formatOpportunityStatus(status)}
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <strong>Kickoff ainda indisponível</strong>
-                      <p>O projeto operacional só pode ser aberto quando a oportunidade estiver em status ganho.</p>
-                    </div>
-                    <span className="status-pill">Aguardando ganho</span>
-                  </>
-                )}
+                  ))}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Timeline</span>
+                  <h3>Histórico comercial</h3>
+                </div>
+                <ul className="history-list history-list-timeline">
+                  {selectedDetail.history.map((entry) => (
+                    <li key={entry.id}>
+                      <strong>
+                        {formatOpportunityStatus(entry.from_status || "open")} → {formatOpportunityStatus(entry.to_status)}
+                      </strong>
+                      <span>{entry.note || entry.changed_by_email || "-"}</span>
+                      <small>{formatDateTime(entry.changed_at)}</small>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
-            <div className="detail-section">
-              <div className="section-heading">
-                <span className="eyebrow">Ações</span>
-                <h3>Fluxo comercial guiado</h3>
-              </div>
+          ) : (
+            <div className="empty-state-panel">
+              <strong>Selecione uma oportunidade na lista</strong>
+              <p>O painel comercial mostra histórico, próximas transições e ponte para kickoff sem misturar isso com o formulário.</p>
+            </div>
+          )
+        ) : (
+          <form className="form-card opportunity-form-shell" onSubmit={handleSubmit}>
+            <div className="section-heading">
+              <span className="eyebrow">Cadastro</span>
+              <h3>{selectedId === null ? "Nova oportunidade" : "Editar oportunidade"}</h3>
+              <p className="section-copy">
+                Use este formulário para criação rápida ou correção cadastral. A operação continua concentrada no painel comercial.
+              </p>
+            </div>
+            <label className="field">
+              <span>Lead</span>
+              <select
+                value={form.lead_id}
+                onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
+              >
+                <option value="">Sem lead</option>
+                {leads.map((lead) => (
+                  <option key={lead.id} value={lead.id}>
+                    {lead.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Título</span>
+              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Descrição</span>
+              <textarea
+                value={form.description}
+                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              />
+            </label>
+            <div className="task-form-grid task-form-grid-2">
               <label className="field">
-                <span>Nota da transição</span>
-                <textarea
-                  value={transitionNote}
-                  onChange={(event) => setTransitionNote(event.target.value)}
-                  placeholder="Motivo do avanço, perda ou retorno de etapa"
+                <span>Status</span>
+                <select
+                  value={form.status}
+                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+                >
+                  {OPPORTUNITY_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {formatOpportunityStatus(status)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Valor</span>
+                <input
+                  value={form.amount}
+                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                  type="number"
                 />
               </label>
-              <div className="form-actions">
-                {selectedDetail.next_statuses.map((status) => (
-                  <button
-                    key={status}
-                    className="ghost-button"
-                    onClick={() => void handleTransition(status)}
-                    type="button"
-                  >
-                    Ir para {formatStatusLabel(status)}
-                  </button>
-                ))}
-              </div>
             </div>
-            <div className="detail-section">
-              <div className="section-heading">
-                <span className="eyebrow">Timeline</span>
-                <h3>Histórico comercial</h3>
-              </div>
-            <ul className="history-list history-list-timeline">
-              {selectedDetail.history.map((entry) => (
-                <li key={entry.id}>
-                  <strong>{formatStatusLabel(entry.from_status || "open")} → {formatStatusLabel(entry.to_status)}</strong>
-                  <span>{entry.note || entry.changed_by_email || "-"}</span>
-                  <small>{formatDateTime(entry.changed_at)}</small>
-                </li>
-              ))}
-            </ul>
+            <div className="form-actions">
+              <button className="primary-button" type="submit">
+                {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
+              </button>
+              {selectedId !== null && (
+                <button
+                  className="ghost-button"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                    setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
+                  }}
+                  type="button"
+                >
+                  Limpar edição
+                </button>
+              )}
             </div>
-          </div>
+          </form>
         )}
       </article>
     </section>

@@ -2,21 +2,8 @@ import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { formatDateTime } from "../app/format";
+import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
-
-const LEAD_STATUSES = ["new", "qualified", "diagnosis", "proposal", "won", "lost"];
-const LEAD_STATUS_LABELS: Record<string, string> = {
-  new: "Novo",
-  qualified: "Qualificado",
-  diagnosis: "Diagnóstico",
-  proposal: "Proposta",
-  won: "Ganho",
-  lost: "Perdido",
-};
-
-function formatStatusLabel(status: string) {
-  return LEAD_STATUS_LABELS[status] || status;
-}
 
 export function LeadsPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
@@ -139,7 +126,7 @@ export function LeadsPage() {
             <option value="">Todos os status</option>
             {LEAD_STATUSES.map((status) => (
               <option key={status} value={status}>
-                {formatStatusLabel(status)}
+                {formatLeadStatus(status)}
               </option>
             ))}
           </select>
@@ -168,7 +155,7 @@ export function LeadsPage() {
         </div>
         <div className="table-summary">
           <span>{total} leads encontrados</span>
-          <span>{filterStatus ? `Filtro: ${formatStatusLabel(filterStatus)}` : "Todos os status"}</span>
+          <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
           <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
         <div className="table-wrap">
@@ -191,7 +178,7 @@ export function LeadsPage() {
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>
-                  <td><span className={`status-pill status-${item.status}`}>{formatStatusLabel(item.status)}</span></td>
+                  <td><span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -252,7 +239,7 @@ export function LeadsPage() {
             >
               {LEAD_STATUSES.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {formatLeadStatus(status)}
                 </option>
               ))}
             </select>
@@ -265,7 +252,7 @@ export function LeadsPage() {
           <div className="detail-panel">
             <div className="detail-hero">
               <div className="detail-badges">
-                <span className={`status-pill status-${selectedDetail.status}`}>{formatStatusLabel(selectedDetail.status)}</span>
+                <span className={`status-pill status-${selectedDetail.status}`}>{formatLeadStatus(selectedDetail.status)}</span>
                 <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
               </div>
               <div className="section-heading">
@@ -309,7 +296,7 @@ export function LeadsPage() {
             <ul className="history-list history-list-timeline">
               {selectedDetail.history.map((entry) => (
                 <li key={entry.id}>
-                  <strong>{formatStatusLabel(entry.from_status || "new")} → {formatStatusLabel(entry.to_status)}</strong>
+                  <strong>{formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}</strong>
                   <span>{entry.note || entry.changed_by_email || "-"}</span>
                   <small>{formatDateTime(entry.changed_at)}</small>
                 </li>

@@ -378,6 +378,39 @@ tbody tr.selected-row {
   margin-bottom: 16px;
 }
 
+.status-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.status-board-card {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 16px;
+  cursor: pointer;
+}
+
+.status-board-card strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.status-board-card small {
+  color: var(--text-soft);
+}
+
+.status-board-card.active,
+.active-toggle {
+  border-color: rgba(141, 197, 61, 0.42);
+  background: linear-gradient(145deg, rgba(141, 197, 61, 0.16), rgba(255, 255, 255, 0.88));
+}
+
 .pager {
   display: flex;
   justify-content: space-between;
@@ -396,6 +429,12 @@ tbody tr.selected-row {
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
+}
+
+.detail-panel-standalone {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .detail-hero {
@@ -459,6 +498,42 @@ tbody tr.selected-row {
 
 .detail-section {
   margin-top: 18px;
+}
+
+.panel-switcher {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.panel-switcher-wrap {
+  flex-wrap: wrap;
+}
+
+.record-action-bar,
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.empty-state-panel {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.empty-state-panel p {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.opportunity-form-shell {
+  gap: 16px;
 }
 
 .kickoff-card {
@@ -638,6 +713,10 @@ tbody tr.selected-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.task-form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .task-list {
@@ -839,7 +918,10 @@ tbody tr.selected-row {
   }
 
   .crm-summary-grid,
-  .crm-context-grid {
+  .crm-context-grid,
+  .status-board,
+  .record-action-bar,
+  .cockpit-grid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -864,7 +946,11 @@ tbody tr.selected-row {
   }
 
   .crm-summary-grid,
-  .crm-context-grid {
+  .crm-context-grid,
+  .status-board,
+  .record-action-bar,
+  .cockpit-grid,
+  .task-form-grid-2 {
     grid-template-columns: 1fr;
   }
 
