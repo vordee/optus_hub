@@ -8,6 +8,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.opportunities import router as opportunities_router
 from app.api.v1.projects import router as projects_router
+from app.api.v1.project_tasks import router as project_tasks_router
 from app.api.v1.roles import router as roles_router
 from app.api.v1.users import router as users_router
 
@@ -20,5 +21,6 @@ api_router.include_router(contacts_router, prefix="/v1/crm", tags=["contacts"])
 api_router.include_router(leads_router, prefix="/v1/crm", tags=["leads"])
 api_router.include_router(opportunities_router, prefix="/v1/crm", tags=["opportunities"])
 api_router.include_router(projects_router, prefix="/v1", tags=["projects"])
+api_router.include_router(project_tasks_router, prefix="/v1", tags=["project_tasks"])
 api_router.include_router(users_router, prefix="/v1/admin", tags=["users"])
 api_router.include_router(roles_router, prefix="/v1/admin", tags=["roles"])

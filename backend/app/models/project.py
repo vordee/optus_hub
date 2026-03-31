@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.contact import Contact
     from app.models.opportunity import Opportunity
     from app.models.project_phase import ProjectPhase
+    from app.models.project_task import ProjectTask
 
 
 class Project(Base):
@@ -34,4 +35,9 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
         order_by="ProjectPhase.sequence",
+    )
+    tasks: Mapped[list["ProjectTask"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="ProjectTask.created_at.desc()",
     )
