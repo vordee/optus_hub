@@ -47,6 +47,13 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta -> Aprovação -> Fech
 - `docs/`: documentação técnica, funcional e operacional
 - `prompts/`: prompts de trabalho para bootstrap das próximas fases
 
+## Runtime minimo atual
+
+- Python 3.9+
+- PostgreSQL 15+
+- Redis 7+
+- Node.js 22+
+
 ## Organização arquitetural
 
 O backend foi separado em camadas para facilitar o bootstrap:
