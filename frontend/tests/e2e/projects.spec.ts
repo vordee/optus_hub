@@ -6,7 +6,7 @@ test("projects page shows operational sections", async ({ page }) => {
   await login(page);
 
   await page.getByRole("button", { name: /Projetos/i }).click();
-  await expect(page.getByRole("heading", { name: "Projetos" })).toBeVisible();
+  await expect(page.locator(".topbar h2")).toHaveText("Projetos");
   await expect(page.getByText("Fluxo sugerido")).toBeVisible();
 
   const rows = page.locator("tbody tr");
