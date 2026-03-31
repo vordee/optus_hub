@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.time import local_now
 
 if TYPE_CHECKING:
     from app.models.company import Company
@@ -26,7 +27,7 @@ class Opportunity(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="open", index=True)
     amount: Mapped[Optional[float]] = mapped_column(Numeric(12, 2), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
     lead: Mapped[Optional["Lead"]] = relationship(back_populates="opportunities", lazy="joined")
     company: Mapped[Optional["Company"]] = relationship(back_populates="opportunities", lazy="joined")
     contact: Mapped[Optional["Contact"]] = relationship(back_populates="opportunities", lazy="joined")

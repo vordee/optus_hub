@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.time import local_now
 
 if TYPE_CHECKING:
     from app.models.company import Company
@@ -24,7 +25,7 @@ class Lead(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     source: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="new", index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
     company: Mapped[Optional["Company"]] = relationship(back_populates="leads", lazy="joined")
     contact: Mapped[Optional["Contact"]] = relationship(back_populates="leads", lazy="joined")
     opportunities: Mapped[list["Opportunity"]] = relationship(back_populates="lead", lazy="selectin")

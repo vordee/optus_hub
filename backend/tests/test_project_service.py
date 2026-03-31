@@ -5,6 +5,7 @@ from app.schemas.contact import ContactCreateRequest
 from app.schemas.lead import LeadCreateRequest
 from app.schemas.opportunity import OpportunityCreateRequest, OpportunityUpdateRequest
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
+from app.schemas.project_phase import ProjectPhaseUpdateRequest
 from app.services.company_service import CompanyService
 from app.services.contact_service import ContactService
 from app.services.lead_service import LeadService
@@ -34,6 +35,10 @@ def test_create_and_update_project(db_session) -> None:
     assert history[0].changed_by_email == "ops@example.com"
     assert history[1].from_status is None
     assert history[1].to_status == "planned"
+    phases = service.list_phases(project.id)
+    assert len(phases) == 6
+    assert phases[0].key == "execution"
+    assert all(item.status == "pending" for item in phases)
 
 
 def test_create_project_from_won_opportunity(db_session) -> None:
@@ -65,6 +70,8 @@ def test_create_project_from_won_opportunity(db_session) -> None:
     assert len(history) == 1
     assert history[0].from_status is None
     assert history[0].to_status == "planned"
+    phases = ProjectService(db_session).list_phases(project.id)
+    assert len(phases) == 6
     assert history[0].changed_by_email == "admin@example.com"
 
 
@@ -118,3 +125,43 @@ def test_list_projects_filters_and_paginates(db_session) -> None:
     assert total == 1
     assert len(items) == 1
     assert items[0].name == "Segundo projeto"
+
+
+def test_update_project_phase_syncs_project_status(db_session) -> None:
+    service = ProjectService(db_session)
+    project = service.create_project(
+        ProjectCreateRequest(name="Projeto workflow", status="planned"),
+        changed_by_email="admin@example.com",
+    )
+    phases = service.list_phases(project.id)
+
+    updated = service.update_phase(
+        project.id,
+        phases[0].id,
+        ProjectPhaseUpdateRequest(status="in_progress", notes="Execucao iniciada"),
+        changed_by_email="ops@example.com",
+    )
+
+    assert updated.status == "in_progress"
+    assert updated.started_at is not None
+    refreshed = service.get_project(project.id)
+    assert refreshed.status == "active"
+    history = service.list_status_history(project.id)
+    assert history[0].to_status == "active"
+
+
+def test_project_phase_rejects_invalid_transition(db_session) -> None:
+    service = ProjectService(db_session)
+    project = service.create_project(ProjectCreateRequest(name="Projeto invalido", status="planned"))
+    phase = service.list_phases(project.id)[0]
+
+    try:
+        service.update_phase(
+            project.id,
+            phase.id,
+            ProjectPhaseUpdateRequest(status="completed"),
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 400
+    else:
+        raise AssertionError("Expected invalid phase transition to be rejected.")

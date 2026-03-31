@@ -1,8 +1,10 @@
 export function formatDateTime(value: string): string {
+  const normalized = /[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-  }).format(new Date(value));
+    timeZone: "America/Cuiaba",
+  }).format(new Date(normalized));
 }
 
 export function formatCurrency(value: number | null): string {

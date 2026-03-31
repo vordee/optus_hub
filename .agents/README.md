@@ -5,6 +5,7 @@ Esta pasta materializa a operação do projeto como uma software house enxuta.
 ## Papéis-base
 
 - `principal-engineer`: coordena escopo, integra entregas e fecha critérios de aceite
+- `project-manager`: mantém backlog, prioridade e paralelismo sem ociosidade
 - `product-architect`: traduz processo da empresa em módulos e contratos
 - `backend-platform`: mantém base FastAPI, auth, RBAC, auditoria e contratos de API
 - `frontend-ux`: constrói shell, telas e experiência operacional alinhada à marca Optus

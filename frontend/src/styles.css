@@ -16,7 +16,7 @@
 
 :root {
   color-scheme: light;
-  font-family: "MontBlanc", "Segoe UI", system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background:
     radial-gradient(circle at 0% 0%, rgba(143, 198, 59, 0.18), transparent 28%),
     radial-gradient(circle at 100% 0%, rgba(143, 198, 59, 0.12), transparent 22%),
@@ -115,6 +115,7 @@ textarea {
 .section-heading h3,
 .hero-panel h1,
 .metric-card strong {
+  font-family: "MontBlanc", "Segoe UI", system-ui, sans-serif;
   margin: 0;
   line-height: 1.05;
 }

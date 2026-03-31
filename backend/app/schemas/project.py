@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from app.schemas.project_phase import ProjectPhaseResponse
 from app.schemas.status_history import StatusHistoryResponse
 
 
@@ -42,4 +43,5 @@ class ProjectListResponse(BaseModel):
 
 
 class ProjectDetailResponse(ProjectResponse):
+    phases: list[ProjectPhaseResponse]
     history: list[StatusHistoryResponse]

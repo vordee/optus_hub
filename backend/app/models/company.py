@@ -7,6 +7,7 @@ from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.time import local_now
 
 if TYPE_CHECKING:
     from app.models.contact import Contact
@@ -23,7 +24,7 @@ class Company(Base):
     trade_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     tax_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, unique=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
     contacts: Mapped[list["Contact"]] = relationship(back_populates="company", lazy="selectin")
     leads: Mapped[list["Lead"]] = relationship(back_populates="company", lazy="selectin")
     opportunities: Mapped[list["Opportunity"]] = relationship(back_populates="company", lazy="selectin")

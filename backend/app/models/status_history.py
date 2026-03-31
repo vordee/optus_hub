@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.core.time import local_now
 
 
 class StatusHistory(Base):
@@ -24,4 +25,4 @@ class StatusHistory(Base):
         index=True,
     )
     changed_by_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=datetime.utcnow, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), default=local_now, nullable=False)
