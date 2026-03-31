@@ -141,29 +141,40 @@ export function ProjectsPage() {
     phaseStats && phaseStats.total > 0 ? Math.round((phaseStats.completed / phaseStats.total) * 100) : 0;
 
   useEffect(() => {
-    void load();
+    void loadProjects();
   }, [page, query, filterStatus]);
+
+  useEffect(() => {
+    void loadAuxiliaryData();
+  }, []);
 
   const selectedOpportunity = opportunities.find((item) => String(item.id) === form.opportunity_id) || null;
 
-  async function load() {
+  async function loadProjects() {
     try {
       setError(null);
-      const [projectResponse, companyItems, contactItems, opportunityResponse] = await Promise.all([
-        apiRequest<ProjectListResponse>(
-          `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
-        ),
+      const projectResponse = await apiRequest<ProjectListResponse>(
+        `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+      );
+      setItems(projectResponse.items);
+      setTotal(projectResponse.total);
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar projetos.");
+    }
+  }
+
+  async function loadAuxiliaryData() {
+    try {
+      const [companyItems, contactItems, opportunityResponse] = await Promise.all([
         apiRequest<CompanyItem[]>("/v1/crm/companies"),
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
         apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=100"),
       ]);
-      setItems(projectResponse.items);
-      setTotal(projectResponse.total);
       setCompanies(companyItems);
       setContacts(contactItems);
       setOpportunities(opportunityResponse.items);
     } catch (loadError) {
-      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar projetos.");
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar dados auxiliares do projeto.");
     }
   }
 
@@ -234,7 +245,7 @@ export function ProjectsPage() {
         });
       }
       resetForm();
-      await load();
+      await loadProjects();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar projeto.");
     } finally {
@@ -261,7 +272,7 @@ export function ProjectsPage() {
         }),
       });
       resetForm();
-      await load();
+      await loadProjects();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao gerar projeto pela oportunidade.");
     } finally {

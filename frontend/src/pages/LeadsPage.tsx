@@ -43,23 +43,32 @@ export function LeadsPage() {
   };
 
   useEffect(() => {
-    void load();
+    void loadLeads();
   }, [page, query, filterStatus]);
 
-  async function load() {
+  useEffect(() => {
+    void loadContacts();
+  }, []);
+
+  async function loadLeads() {
     try {
       setError(null);
-      const [leadResponse, contactItems] = await Promise.all([
-        apiRequest<LeadListResponse>(
-          `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
-        ),
-        apiRequest<ContactItem[]>("/v1/crm/contacts"),
-      ]);
+      const leadResponse = await apiRequest<LeadListResponse>(
+        `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+      );
       setItems(leadResponse.items);
       setTotal(leadResponse.total);
-      setContacts(contactItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads.");
+    }
+  }
+
+  async function loadContacts() {
+    try {
+      const contactItems = await apiRequest<ContactItem[]>("/v1/crm/contacts");
+      setContacts(contactItems);
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar contatos.");
     }
   }
 
@@ -110,7 +119,7 @@ export function LeadsPage() {
       setSelectedId(null);
       setSelectedDetail(null);
       setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
-      await load();
+      await loadLeads();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar lead.");
     }

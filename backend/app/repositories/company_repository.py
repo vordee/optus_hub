@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.company import Company
+from app.models.contact import Contact
+from app.models.lead import Lead
 
 
 class CompanyRepository:
@@ -13,12 +15,29 @@ class CompanyRepository:
         self.db = db
 
     def list_all(self) -> list[Company]:
+        contact_count = (
+            select(func.count(Contact.id))
+            .where(Contact.company_id == Company.id)
+            .correlate(Company)
+            .scalar_subquery()
+        )
+        lead_count = (
+            select(func.count(Lead.id))
+            .where(Lead.company_id == Company.id)
+            .correlate(Company)
+            .scalar_subquery()
+        )
         stmt = (
-            select(Company)
-            .options(selectinload(Company.contacts), selectinload(Company.leads))
+            select(Company, contact_count.label("contact_count"), lead_count.label("lead_count"))
             .order_by(Company.legal_name, Company.id)
         )
-        return list(self.db.execute(stmt).scalars().unique().all())
+        rows = self.db.execute(stmt).all()
+        items: list[Company] = []
+        for company, row_contact_count, row_lead_count in rows:
+            setattr(company, "contact_count", int(row_contact_count or 0))
+            setattr(company, "lead_count", int(row_lead_count or 0))
+            items.append(company)
+        return items
 
     def get_by_id(self, company_id: int) -> Optional[Company]:
         stmt = (

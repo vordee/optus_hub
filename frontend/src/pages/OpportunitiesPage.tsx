@@ -65,23 +65,32 @@ export function OpportunitiesPage() {
   };
 
   useEffect(() => {
-    void load();
+    void loadOpportunities();
   }, [page, query, filterStatus]);
 
-  async function load() {
+  useEffect(() => {
+    void loadLeads();
+  }, []);
+
+  async function loadOpportunities() {
     try {
       setError(null);
-      const [response, leadItems] = await Promise.all([
-        apiRequest<OpportunityListResponse>(
-          `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
-        ),
-        apiRequest<LeadItem[]>("/v1/crm/leads"),
-      ]);
+      const response = await apiRequest<OpportunityListResponse>(
+        `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+      );
       setItems(response.items);
       setTotal(response.total);
-      setLeads(leadItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar oportunidades.");
+    }
+  }
+
+  async function loadLeads() {
+    try {
+      const leadItems = await apiRequest<LeadItem[]>("/v1/crm/leads");
+      setLeads(leadItems);
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads de apoio.");
     }
   }
 
@@ -99,7 +108,7 @@ export function OpportunitiesPage() {
         }),
       });
       setTransitionNote("");
-      await load();
+      await loadOpportunities();
       await loadDetail(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao executar transição da oportunidade.");
@@ -123,7 +132,7 @@ export function OpportunitiesPage() {
           kickoff_notes: kickoffForm.kickoff_notes || null,
         }),
       });
-      await load();
+      await loadOpportunities();
       await loadDetail(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao abrir kickoff da oportunidade.");
@@ -185,7 +194,7 @@ export function OpportunitiesPage() {
       setSelectedId(null);
       setSelectedDetail(null);
       setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
-      await load();
+      await loadOpportunities();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar oportunidade.");
     }

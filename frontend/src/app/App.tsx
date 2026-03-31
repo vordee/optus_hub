@@ -20,16 +20,23 @@ interface SessionState {
   error: string | null;
 }
 
-const NAV_ITEMS: Array<{ key: NavKey; label: string; group: string; description: string }> = [
-  { key: "dashboard", label: "Visão geral", group: "Operação", description: "Estado atual da plataforma e atalhos de trabalho." },
-  { key: "users", label: "Usuários", group: "Admin", description: "Contas, acessos e vínculo de papéis." },
-  { key: "roles", label: "Papéis", group: "Admin", description: "Permissões e controle de acesso." },
-  { key: "audit", label: "Auditoria", group: "Admin", description: "Eventos sensíveis e trilha operacional." },
+interface NavItem {
+  key: NavKey;
+  label: string;
+  group: string;
+  description: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { key: "dashboard", label: "Visão geral", group: "Visão Geral", description: "Estado atual da plataforma e atalhos de trabalho." },
+  { key: "users", label: "Usuários", group: "Administração", description: "Contas, acessos e vínculo de papéis." },
+  { key: "roles", label: "Papéis", group: "Administração", description: "Permissões e controle de acesso." },
+  { key: "audit", label: "Auditoria", group: "Administração", description: "Eventos sensíveis e trilha operacional." },
   { key: "companies", label: "Empresas", group: "CRM", description: "Cadastro base do relacionamento comercial." },
   { key: "contacts", label: "Contatos", group: "CRM", description: "Pessoas vinculadas às contas." },
   { key: "leads", label: "Leads", group: "CRM", description: "Entrada e qualificação de demanda." },
   { key: "opportunities", label: "Oportunidades", group: "CRM", description: "Pipeline comercial e fechamento." },
-  { key: "projects", label: "Projetos", group: "Entrega", description: "Entrega operacional iniciada a partir do funil." },
+  { key: "projects", label: "Projetos", group: "Operação", description: "Entrega operacional iniciada a partir do funil." },
 ];
 
 export function App() {
@@ -40,6 +47,15 @@ export function App() {
   });
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
   const activeItem = NAV_ITEMS.find((item) => item.key === activeNav);
+  const navGroups = NAV_ITEMS.reduce<Array<{ group: string; items: NavItem[] }>>((groups, item) => {
+    const currentGroup = groups.find((entry) => entry.group === item.group);
+    if (currentGroup) {
+      currentGroup.items.push(item);
+      return groups;
+    }
+    groups.push({ group: item.group, items: [item] });
+    return groups;
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -100,16 +116,23 @@ export function App() {
         </div>
 
         <nav className="nav-list">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              className={item.key === activeNav ? "nav-item active" : "nav-item"}
-              onClick={() => setActiveNav(item.key)}
-              type="button"
-            >
-              <span>{item.label}</span>
-              <small>{item.group}</small>
-            </button>
+          {navGroups.map((group) => (
+            <div key={group.group} className="nav-group">
+              <span className="nav-group-title">{group.group}</span>
+              <div className="nav-group-items">
+                {group.items.map((item) => (
+                  <button
+                    key={item.key}
+                    className={item.key === activeNav ? "nav-item active" : "nav-item"}
+                    onClick={() => setActiveNav(item.key)}
+                    type="button"
+                  >
+                    <span>{item.label}</span>
+                    <small>{item.description}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

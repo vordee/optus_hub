@@ -114,13 +114,31 @@ textarea {
 .nav-list {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.nav-group {
+  display: grid;
+  gap: 10px;
+}
+
+.nav-group-title {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 248, 243, 0.52);
+}
+
+.nav-group-items {
+  display: grid;
   gap: 10px;
 }
 
 .nav-item {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: start;
+  gap: 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
@@ -173,6 +191,7 @@ textarea {
 .sidebar .nav-item.active {
   background: linear-gradient(135deg, rgba(141, 197, 61, 0.24), rgba(141, 197, 61, 0.08));
   border-color: rgba(141, 197, 61, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(141, 197, 61, 0.14);
 }
 
 .sidebar-footer {

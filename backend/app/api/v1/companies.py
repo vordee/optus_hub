@@ -17,8 +17,8 @@ def serialize_company(company) -> CompanyResponse:
         tax_id=company.tax_id,
         is_active=company.is_active,
         created_at=company.created_at,
-        contact_count=len(company.contacts),
-        lead_count=len(company.leads),
+        contact_count=int(getattr(company, "contact_count", len(company.contacts))),
+        lead_count=int(getattr(company, "lead_count", len(company.leads))),
     )
 
 
