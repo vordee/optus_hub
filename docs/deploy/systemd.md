@@ -11,6 +11,9 @@
 - servico ativo: `optus-hub-api`
 - usuario de execucao: `optushub`
 - restart policy: `always`
+- `NoNewPrivileges=true`
+- `PrivateTmp=true`
+- `ProtectSystem=full`
 
 ## Pendencias
 

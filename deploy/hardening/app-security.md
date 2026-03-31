@@ -7,6 +7,9 @@
 - servico dedicado: `optushub`
 - PostgreSQL local e nao exposto externamente
 - bootstrap admin desativado no `.env`
+- rate limiting e headers defensivos no `nginx`
+- unit file do backend com restricoes basicas de `systemd`
+- `.env` com permissao `640` e grupo `optushub`
 
 ## Regras
 
@@ -18,6 +21,6 @@
 ## Proximos endurecimentos recomendados
 
 - trocar HTTP por HTTPS com certificado valido
-- adicionar rate limiting no nginx
 - definir politica de rotacao de segredo da API
 - adicionar logs de autenticacao e eventos sensiveis
+- substituir bootstrap admin por fluxo administrativo real

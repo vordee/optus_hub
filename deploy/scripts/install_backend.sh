@@ -18,5 +18,10 @@ cd "$BACKEND_ROOT"
 python3 -m venv .venv
 .venv/bin/pip install -r requirements/base.txt
 
+if [[ -f .env ]]; then
+  chown root:optushub .env
+  chmod 640 .env
+fi
+
 systemctl daemon-reload
 systemctl enable --now "$SERVICE_NAME"

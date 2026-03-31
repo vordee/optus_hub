@@ -12,10 +12,11 @@
 - reverse proxy para `127.0.0.1:8000`
 - publicacao em `80/tcp`
 - logs dedicados de access e error
+- rate limiting por IP
+- headers defensivos para superficie HTTP atual
 
 ## Pendencias
 
 - hostnames finais
 - TLS
-- rate limiting
 - headers de seguranca mais completos
