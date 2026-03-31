@@ -42,6 +42,10 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
   year: "numeric",
 });
 
+function ensureArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 function formatStatusLabel(status: string, labels: Record<string, string>) {
   return labels[status] || status;
 }
@@ -109,8 +113,14 @@ export function ProjectsPage() {
     due_date: "",
   });
 
+  const safeTasks = ensureArray(tasks);
+  const safeItems = ensureArray(items);
+  const safeCompanies = ensureArray(companies);
+  const safeContacts = ensureArray(contacts);
+  const safeOpportunities = ensureArray(opportunities);
+
   const tasksByPhaseId = new Map<number, ProjectTaskItem[]>();
-  for (const task of tasks) {
+  for (const task of safeTasks) {
     if (task.project_phase_id === null) {
       continue;
     }
@@ -120,14 +130,14 @@ export function ProjectsPage() {
     tasksByPhaseId.set(task.project_phase_id, current);
   }
 
-  const unassignedTasks = tasks.filter((task) => task.project_phase_id === null);
+  const unassignedTasks = safeTasks.filter((task) => task.project_phase_id === null);
   const taskStats = {
-    total: tasks.length,
-    pending: tasks.filter((task) => task.status === "pending").length,
-    inProgress: tasks.filter((task) => task.status === "in_progress").length,
-    blocked: tasks.filter((task) => task.status === "blocked").length,
-    done: tasks.filter((task) => task.status === "done").length,
-    overdue: tasks.filter(isTaskOverdue).length,
+    total: safeTasks.length,
+    pending: safeTasks.filter((task) => task.status === "pending").length,
+    inProgress: safeTasks.filter((task) => task.status === "in_progress").length,
+    blocked: safeTasks.filter((task) => task.status === "blocked").length,
+    done: safeTasks.filter((task) => task.status === "done").length,
+    overdue: safeTasks.filter(isTaskOverdue).length,
   };
   const phaseStats = selectedDetail
     ? {
@@ -148,7 +158,7 @@ export function ProjectsPage() {
     void loadAuxiliaryData();
   }, []);
 
-  const selectedOpportunity = opportunities.find((item) => String(item.id) === form.opportunity_id) || null;
+  const selectedOpportunity = safeOpportunities.find((item) => String(item.id) === form.opportunity_id) || null;
 
   async function loadProjects() {
     try {
@@ -156,7 +166,7 @@ export function ProjectsPage() {
       const projectResponse = await apiRequest<ProjectListResponse>(
         `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
       );
-      setItems(projectResponse.items);
+      setItems(ensureArray(projectResponse.items));
       setTotal(projectResponse.total);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar projetos.");
@@ -170,9 +180,9 @@ export function ProjectsPage() {
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
         apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=100"),
       ]);
-      setCompanies(companyItems);
-      setContacts(contactItems);
-      setOpportunities(opportunityResponse.items);
+      setCompanies(ensureArray(companyItems));
+      setContacts(ensureArray(contactItems));
+      setOpportunities(ensureArray(opportunityResponse.items));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar dados auxiliares do projeto.");
     }
@@ -202,7 +212,7 @@ export function ProjectsPage() {
         apiRequest<ProjectTaskItem[]>(`/v1/projects/${projectId}/tasks`),
       ]);
       setSelectedDetail(detail);
-      setTasks(taskItems);
+      setTasks(ensureArray(taskItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do projeto.");
     }
@@ -414,7 +424,7 @@ export function ProjectsPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {safeItems.map((item) => (
                 <tr key={item.id} onClick={() => populate(item)}>
                   <td>{item.name}</td>
                   <td>{item.company_name || "-"}</td>
@@ -469,7 +479,7 @@ export function ProjectsPage() {
               onChange={(event) => setForm((current) => ({ ...current, opportunity_id: event.target.value }))}
             >
               <option value="">Sem vínculo</option>
-              {opportunities.map((opportunity) => (
+              {safeOpportunities.map((opportunity) => (
                 <option key={opportunity.id} value={opportunity.id}>
                   {opportunity.title} {opportunity.status !== "won" ? `(${opportunity.status})` : "(won)"}
                 </option>
@@ -484,7 +494,7 @@ export function ProjectsPage() {
               onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
             >
               <option value="">Sem vínculo</option>
-              {companies.map((company) => (
+              {safeCompanies.map((company) => (
                 <option key={company.id} value={company.id}>
                   {company.legal_name}
                 </option>
@@ -499,7 +509,7 @@ export function ProjectsPage() {
               onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}
             >
               <option value="">Sem vínculo</option>
-              {contacts.map((contact) => (
+              {safeContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
                   {contact.full_name}
                 </option>
@@ -772,7 +782,7 @@ export function ProjectsPage() {
                 </form>
 
                 <ul className="task-list">
-                  {tasks.map((task) => (
+                  {safeTasks.map((task) => (
                     <li key={task.id} className="task-item">
                       <div className="task-item-main">
                         <strong>{task.title}</strong>
@@ -801,7 +811,7 @@ export function ProjectsPage() {
                       </div>
                     </li>
                   ))}
-                  {tasks.length === 0 && <li className="task-empty">Nenhuma tarefa cadastrada para este projeto.</li>}
+                  {safeTasks.length === 0 && <li className="task-empty">Nenhuma tarefa cadastrada para este projeto.</li>}
                 </ul>
               </div>
               <ul className="history-list">

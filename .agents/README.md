@@ -12,6 +12,7 @@ Esta pasta materializa a operação do projeto como uma software house enxuta.
 - `workflow-projects`: evolui CRM, oportunidades, projetos e motor de workflow
 - `security-sre`: cuida de hardening, servidor Linux, nginx, PostgreSQL e publicação
 - `qa-release`: valida contrato, testes, regressão e prontidão de deploy
+- `qa-e2e`: executa smoke tests ponta a ponta na aplicação web publicada
 - `financial-integrations`: cuida de integrações financeiras e faturamento
 - `documents-ops`: cuida da camada documental e aceite
 - `observability-platform`: cuida de logs, métricas e diagnóstico
