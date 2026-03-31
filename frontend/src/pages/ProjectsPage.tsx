@@ -10,9 +10,11 @@ import type {
   ProjectDetailItem,
   ProjectItem,
   ProjectListResponse,
+  ProjectTaskItem,
 } from "../app/types";
 
 const PROJECT_STATUSES = ["planned", "active", "on_hold", "completed"];
+const PROJECT_TASK_STATUSES = ["pending", "in_progress", "done", "blocked"];
 const PAGE_SIZE = 8;
 
 export function ProjectsPage() {
@@ -20,6 +22,7 @@ export function ProjectsPage() {
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
+  const [tasks, setTasks] = useState<ProjectTaskItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<ProjectDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +31,7 @@ export function ProjectsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
   const [form, setForm] = useState({
     opportunity_id: "",
     company_id: "",
@@ -35,6 +39,13 @@ export function ProjectsPage() {
     name: "",
     status: "planned",
     description: "",
+  });
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    status: "pending",
+    assigned_to_email: "",
+    due_date: "",
   });
 
   useEffect(() => {
@@ -78,7 +89,12 @@ export function ProjectsPage() {
 
   async function loadDetail(projectId: number) {
     try {
-      setSelectedDetail(await apiRequest<ProjectDetailItem>(`/v1/projects/${projectId}`));
+      const [detail, taskItems] = await Promise.all([
+        apiRequest<ProjectDetailItem>(`/v1/projects/${projectId}`),
+        apiRequest<ProjectTaskItem[]>(`/v1/projects/${projectId}/tasks`),
+      ]);
+      setSelectedDetail(detail);
+      setTasks(taskItems);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do projeto.");
     }
@@ -147,6 +163,7 @@ export function ProjectsPage() {
   function resetForm() {
     setSelectedId(null);
     setSelectedDetail(null);
+    setTasks([]);
     setForm({
       opportunity_id: "",
       company_id: "",
@@ -155,6 +172,63 @@ export function ProjectsPage() {
       status: "planned",
       description: "",
     });
+    setTaskForm({
+      title: "",
+      description: "",
+      status: "pending",
+      assigned_to_email: "",
+      due_date: "",
+    });
+  }
+
+  async function handleTaskSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedId === null) {
+      setError("Selecione um projeto antes de criar uma tarefa.");
+      return;
+    }
+    setTaskSubmitting(true);
+    setError(null);
+
+    try {
+      await apiRequest(`/v1/projects/${selectedId}/tasks`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: taskForm.title,
+          description: taskForm.description || null,
+          status: taskForm.status,
+          assigned_to_email: taskForm.assigned_to_email || null,
+          due_date: taskForm.due_date || null,
+        }),
+      });
+      setTaskForm({
+        title: "",
+        description: "",
+        status: "pending",
+        assigned_to_email: "",
+        due_date: "",
+      });
+      await loadDetail(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao criar tarefa do projeto.");
+    } finally {
+      setTaskSubmitting(false);
+    }
+  }
+
+  async function updateTaskStatus(taskId: number, status: string) {
+    if (selectedId === null) {
+      return;
+    }
+    try {
+      await apiRequest(`/v1/projects/${selectedId}/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await loadDetail(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao atualizar tarefa do projeto.");
+    }
   }
 
   return (
@@ -368,6 +442,94 @@ export function ProjectsPage() {
                 <span>{formatDateTime(selectedDetail.created_at)}</span>
               </div>
               <p>{selectedDetail.description || "Sem descrição."}</p>
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Tarefas</span>
+                  <h3>Execução do projeto</h3>
+                </div>
+                <form className="form-card compact-form" onSubmit={handleTaskSubmit}>
+                  <label className="field">
+                    <span>Título da tarefa</span>
+                    <input
+                      value={taskForm.title}
+                      onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Descrição</span>
+                    <textarea
+                      value={taskForm.description}
+                      onChange={(event) => setTaskForm((current) => ({ ...current, description: event.target.value }))}
+                    />
+                  </label>
+                  <div className="task-form-grid">
+                    <label className="field">
+                      <span>Status</span>
+                      <select
+                        value={taskForm.status}
+                        onChange={(event) => setTaskForm((current) => ({ ...current, status: event.target.value }))}
+                      >
+                        {PROJECT_TASK_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Responsável</span>
+                      <input
+                        value={taskForm.assigned_to_email}
+                        onChange={(event) =>
+                          setTaskForm((current) => ({ ...current, assigned_to_email: event.target.value }))
+                        }
+                        placeholder="email@optus.com"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Prazo</span>
+                      <input
+                        type="date"
+                        value={taskForm.due_date}
+                        onChange={(event) => setTaskForm((current) => ({ ...current, due_date: event.target.value }))}
+                      />
+                    </label>
+                  </div>
+                  <button className="primary-button" disabled={taskSubmitting} type="submit">
+                    {taskSubmitting ? "Criando..." : "Criar tarefa"}
+                  </button>
+                </form>
+
+                <ul className="task-list">
+                  {tasks.map((task) => (
+                    <li key={task.id} className="task-item">
+                      <div className="task-item-main">
+                        <strong>{task.title}</strong>
+                        <p>{task.description || "Sem descrição."}</p>
+                        <div className="detail-meta">
+                          <span>{task.assigned_to_email || "Sem responsável"}</span>
+                          <span>{task.due_date || "Sem prazo"}</span>
+                          <span>{formatDateTime(task.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="task-item-actions">
+                        <span className={`status-pill status-task-${task.status}`}>{task.status}</span>
+                        <select
+                          value={task.status}
+                          onChange={(event) => void updateTaskStatus(task.id, event.target.value)}
+                        >
+                          {PROJECT_TASK_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </li>
+                  ))}
+                  {tasks.length === 0 && <li className="task-empty">Nenhuma tarefa cadastrada para este projeto.</li>}
+                </ul>
+              </div>
               <ul className="history-list">
                 {selectedDetail.history.map((entry) => (
                   <li key={entry.id}>

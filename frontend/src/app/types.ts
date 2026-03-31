@@ -149,6 +149,17 @@ export interface ProjectDetailItem extends ProjectItem {
   history: StatusHistoryItem[];
 }
 
+export interface ProjectTaskItem {
+  id: number;
+  project_id: number;
+  title: string;
+  description: string | null;
+  status: string;
+  assigned_to_email: string | null;
+  due_date: string | null;
+  created_at: string;
+}
+
 export type NavKey =
   | "dashboard"
   | "users"
