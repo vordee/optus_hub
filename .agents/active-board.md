@@ -9,27 +9,29 @@ Quadro operacional para manter o projeto em movimento sem frentes paradas.
 - `principal-engineer`
   integrar cortes, validar e publicar
 - `workflow-projects`
-  evoluir projetos, fases e tarefas
+  consolidar workflow comercial -> kickoff -> projeto
 - `frontend-ux`
-  refletir workflow de projetos e melhorar ergonomia operacional
-- `security-sre`
-  validar servidor, timezone, runtime e publicação
+  consolidar CRM operacional em contas, leads, oportunidades e projetos
+- `qa-release`
+  ampliar smoke tests e proteger fluxos críticos do frontend
+- `observability-platform`
+  melhorar medição de performance, erros e runbooks de análise
 
 ## Próximos
 
 - `product-architect`
-  detalhar workflow comercial até fechamento e abertura de projeto
+  detalhar workflow comercial até aprovação, fechamento e abertura de projeto
 - `backend-platform`
-  consolidar permissões, contratos e consistência transversal
-- `qa-release`
-  ampliar smoke tests e checklists de release
+  preparar próximo módulo de domínio com menor atrito de integração
+- `security-sre`
+  seguir com baseline de segurança e validação pós-publicação
 
 ## Backlog imediato
 
-1. expor `project_tasks` no frontend
-2. ligar tarefas às fases de projeto
-3. criar transições comerciais mais guiadas em oportunidades
-4. preparar o esqueleto de workflow/aprovação
+1. enriquecer workflow comercial com regras mais explícitas de transição e kickoff
+2. amadurecer `contacts` e `dashboard` no frontend para o mesmo padrão operacional
+3. ampliar smoke E2E para CRM além de auth/navegação/projetos
+4. instrumentar profiling/observabilidade leve para analisar performance real
 
 ## Regra de atualização
 
