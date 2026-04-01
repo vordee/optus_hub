@@ -21,7 +21,7 @@ export function LeadsPage() {
   const [total, setTotal] = useState(0);
   const [contactsLoaded, setContactsLoaded] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(false);
-  const [leadView, setLeadView] = useState<"painel" | "cadastro">("painel");
+  const [leadView, setLeadView] = useState<"painel" | "cadastro">("cadastro");
   const [form, setForm] = useState({
     contact_id: "",
     title: "",
@@ -84,7 +84,7 @@ export function LeadsPage() {
 
   function populate(item: LeadItem) {
     setSelectedId(item.id);
-    setLeadView("painel");
+    setLeadView("cadastro");
     setForm({
       contact_id: item.contact_id ? String(item.contact_id) : "",
       title: item.title,
@@ -233,15 +233,61 @@ export function LeadsPage() {
 
       <article className="card">
         <div className="panel-switcher">
-          <button className={leadView === "painel" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("painel")} type="button">
-            Painel do lead
-          </button>
           <button className={leadView === "cadastro" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("cadastro")} type="button">
             Cadastro
           </button>
+          <button className={leadView === "painel" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("painel")} type="button">
+            Painel do lead
+          </button>
         </div>
 
-        {leadView === "painel" ? (
+        {leadView === "cadastro" ? (
+          <form className="form-card" onSubmit={handleSubmit}>
+            <div className="section-heading">
+              <span className="eyebrow">Cadastro</span>
+              <h3>{selectedId === null ? "Novo lead" : "Editar lead"}</h3>
+            </div>
+            {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
+            <label className="field">
+              <span>Contato</span>
+              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
+                <option value="">Sem vínculo</option>
+                {safeContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.full_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Título</span>
+              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Descrição</span>
+              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Origem</span>
+              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Status</span>
+              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatLeadStatus(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button className="primary-button" type="submit">
+                {selectedId === null ? "Criar lead" : "Atualizar lead"}
+              </button>
+            </div>
+          </form>
+        ) : (
           selectedDetail ? (
             <div className="detail-panel detail-panel-standalone">
               <div className="detail-hero">
@@ -324,52 +370,6 @@ export function LeadsPage() {
               <p>O painel do lead concentra contexto, leitura da etapa e histórico sem cair direto em edição.</p>
             </div>
           )
-        ) : (
-          <form className="form-card" onSubmit={handleSubmit}>
-            <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Novo lead" : "Editar lead"}</h3>
-            </div>
-            {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
-            <label className="field">
-              <span>Contato</span>
-              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
-                <option value="">Sem vínculo</option>
-                {safeContacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.full_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Título</span>
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Descrição</span>
-              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Origem</span>
-              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Status</span>
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-                {LEAD_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {formatLeadStatus(status)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                {selectedId === null ? "Criar lead" : "Atualizar lead"}
-              </button>
-            </div>
-          </form>
         )}
       </article>
     </section>
