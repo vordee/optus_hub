@@ -1,5 +1,5 @@
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.audit_event import AuditEvent
 from app.models.company import Company
@@ -31,32 +31,40 @@ class DashboardService:
         active_project_count = self._count_rows(Project, Project.status == "active")
 
         recent_contacts = self.db.execute(
-            select(Contact)
-            .options(joinedload(Contact.company))
+            select(Contact.id, Contact.full_name, Company.legal_name, Contact.created_at)
+            .outerjoin(Company, Company.id == Contact.company_id)
             .order_by(Contact.created_at.desc(), Contact.id.desc())
             .limit(3)
-        ).scalars().unique().all()
+        ).all()
         recent_leads = self.db.execute(
-            select(Lead)
-            .options(joinedload(Lead.company))
+            select(Lead.id, Lead.title, Company.legal_name, Lead.status, Lead.created_at)
+            .outerjoin(Company, Company.id == Lead.company_id)
             .order_by(Lead.created_at.desc(), Lead.id.desc())
             .limit(3)
-        ).scalars().unique().all()
+        ).all()
         recent_opportunities = self.db.execute(
-            select(Opportunity)
+            select(Opportunity.id, Opportunity.title, Opportunity.status, Opportunity.created_at)
             .order_by(Opportunity.created_at.desc(), Opportunity.id.desc())
             .limit(6)
-        ).scalars().all()
+        ).all()
         recent_projects = self.db.execute(
-            select(Project)
+            select(Project.id, Project.name, Project.status, Project.created_at)
             .order_by(Project.created_at.desc(), Project.id.desc())
             .limit(6)
-        ).scalars().all()
+        ).all()
         recent_audit_events = self.db.execute(
-            select(AuditEvent)
+            select(
+                AuditEvent.id,
+                AuditEvent.created_at,
+                AuditEvent.action,
+                AuditEvent.status,
+                AuditEvent.actor_email,
+                AuditEvent.target_type,
+                AuditEvent.target_id,
+            )
             .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
             .limit(8)
-        ).scalars().all()
+        ).all()
 
         return DashboardSummaryResponse(
             user_count=user_count,
@@ -67,50 +75,50 @@ class DashboardService:
             active_project_count=active_project_count,
             recent_contacts=[
                 DashboardRecentContact(
-                    id=item.id,
-                    full_name=item.full_name,
-                    company_name=item.company.legal_name if item.company else None,
-                    created_at=item.created_at,
+                    id=item[0],
+                    full_name=item[1],
+                    company_name=item[2],
+                    created_at=item[3],
                 )
                 for item in recent_contacts
             ],
             recent_leads=[
                 DashboardRecentLead(
-                    id=item.id,
-                    title=item.title,
-                    company_name=item.company.legal_name if item.company else None,
-                    status=item.status,
-                    created_at=item.created_at,
+                    id=item[0],
+                    title=item[1],
+                    company_name=item[2],
+                    status=item[3],
+                    created_at=item[4],
                 )
                 for item in recent_leads
             ],
             recent_opportunities=[
                 DashboardRecentOpportunity(
-                    id=item.id,
-                    title=item.title,
-                    status=item.status,
-                    created_at=item.created_at,
+                    id=item[0],
+                    title=item[1],
+                    status=item[2],
+                    created_at=item[3],
                 )
                 for item in recent_opportunities
             ],
             recent_projects=[
                 DashboardRecentProject(
-                    id=item.id,
-                    name=item.name,
-                    status=item.status,
-                    created_at=item.created_at,
+                    id=item[0],
+                    name=item[1],
+                    status=item[2],
+                    created_at=item[3],
                 )
                 for item in recent_projects
             ],
             recent_audit_events=[
                 DashboardRecentAuditEvent(
-                    id=item.id,
-                    created_at=item.created_at,
-                    action=item.action,
-                    status=item.status,
-                    actor_email=item.actor_email,
-                    target_type=item.target_type,
-                    target_id=item.target_id,
+                    id=item[0],
+                    created_at=item[1],
+                    action=item[2],
+                    status=item[3],
+                    actor_email=item[4],
+                    target_type=item[5],
+                    target_id=item[6],
                 )
                 for item in recent_audit_events
             ],
