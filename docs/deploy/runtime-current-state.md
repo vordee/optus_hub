@@ -1,6 +1,6 @@
 # Runtime Current State
 
-Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `b32aa44`.
+Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `2f5b9ff`.
 
 Use este arquivo como fonte de verdade operacional para humanos e agentes antes de qualquer novo deploy, troubleshooting ou continuidade de implementacao.
 
@@ -22,7 +22,7 @@ Existem dois caminhos diferentes para frontend e isso precisa continuar explicit
 
 No estado atual, `/var/www/optus-hub/frontend` e um link simbolico para o release ativo:
 
-- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-b32aa44-20260401094901`
+- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-2f5b9ff-20260401101816`
 
 ## Nginx
 
@@ -106,8 +106,7 @@ mkdir -p /var/www/optus-hub/releases
 mkdir -p /var/www/optus-hub/releases/frontend-<commit>-<timestamp>
 tar -xzf /tmp/optus_hub-frontend-dist.tgz -C /var/www/optus-hub/releases/frontend-<commit>-<timestamp>
 chown -R nginx:nginx /var/www/optus-hub/releases/frontend-<commit>-<timestamp>
-mv /var/www/optus-hub/frontend /var/www/optus-hub/frontend-prev-<timestamp>
-ln -s /var/www/optus-hub/releases/frontend-<commit>-<timestamp> /var/www/optus-hub/frontend
+ln -sfn /var/www/optus-hub/releases/frontend-<commit>-<timestamp> /var/www/optus-hub/frontend
 chown -h nginx:nginx /var/www/optus-hub/frontend
 nginx -t
 systemctl reload nginx
@@ -124,11 +123,11 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 
 ## Estado publicado nesta entrega
 
-- commit publicado: `b32aa44`
-- release ativo: `/var/www/optus-hub/releases/frontend-b32aa44-20260401094901`
+- commit publicado: `2f5b9ff`
+- release ativo: `/var/www/optus-hub/releases/frontend-2f5b9ff-20260401101816`
 - assets servidos apos publicacao:
-  - `index-C0CQEbzT.js`
-  - `index-FT7ogpZ-.css`
+  - `index-BDqH0UAs.js`
+  - `index-BPHMSRbS.css`
 
 ## Regra para continuidade por agentes
 
