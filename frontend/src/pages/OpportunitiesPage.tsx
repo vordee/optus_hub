@@ -39,6 +39,7 @@ export function OpportunitiesPage() {
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [opportunityView, setOpportunityView] = useState<"painel" | "cadastro">("painel");
+  const [listView, setListView] = useState<"lista" | "pipeline">("pipeline");
   const [kickoffForm, setKickoffForm] = useState({
     project_name: "",
     kickoff_owner_email: "",
@@ -66,6 +67,12 @@ export function OpportunitiesPage() {
   const safeLeads = ensureArray(leads);
   const safeNextStatuses = ensureArray(selectedDetail?.next_statuses);
   const safeHistory = ensureArray(selectedDetail?.history);
+  const pipelineItems = useMemo(() => {
+    return OPPORTUNITY_STATUSES.map((status) => ({
+      status,
+      items: items.filter((item) => item.status === status),
+    }));
+  }, [items]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
@@ -301,34 +308,82 @@ export function OpportunitiesPage() {
           <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
           <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Empresa</th>
-                <th>Status</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr
-                  key={item.id}
-                  className={selectedId === item.id ? "selected-row" : ""}
-                  onClick={() => populate(item)}
-                >
-                  <td>{item.title}</td>
-                  <td>{item.company_name || "-"}</td>
-                  <td>
-                    <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
-                  </td>
-                  <td>{formatCurrency(item.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="panel-switcher">
+          <button
+            className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setListView("pipeline")}
+            type="button"
+          >
+            Pipeline
+          </button>
+          <button
+            className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setListView("lista")}
+            type="button"
+          >
+            Lista
+          </button>
         </div>
+        {listView === "pipeline" ? (
+          <div className="pipeline-grid">
+            {pipelineItems.map((column) => (
+              <article key={column.status} className="pipeline-column">
+                <div className="pipeline-column-head">
+                  <div>
+                    <span className="eyebrow">Etapa</span>
+                    <h4>{formatOpportunityStatus(column.status)}</h4>
+                  </div>
+                  <span className="status-pill">{column.items.length}</span>
+                </div>
+                <div className="pipeline-stack">
+                  {column.items.map((item) => (
+                    <button
+                      key={item.id}
+                      className={selectedId === item.id ? "pipeline-card selected" : "pipeline-card"}
+                      onClick={() => populate(item)}
+                      type="button"
+                    >
+                      <strong>{item.title}</strong>
+                      <span>{item.company_name || "Sem empresa"}</span>
+                      <small>{item.contact_name || "Sem contato"}</small>
+                      <b>{formatCurrency(item.amount)}</b>
+                    </button>
+                  ))}
+                  {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Empresa</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={selectedId === item.id ? "selected-row" : ""}
+                    onClick={() => populate(item)}
+                  >
+                    <td>{item.title}</td>
+                    <td>{item.company_name || "-"}</td>
+                    <td>
+                      <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
+                    </td>
+                    <td>{formatCurrency(item.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="pager">
           <span>{total} registros</span>
           <div className="pager-actions">
