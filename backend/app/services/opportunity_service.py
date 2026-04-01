@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.opportunity import Opportunity
+from app.repositories.crm_activity_repository import CRMActivityRepository
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.lead_repository import LeadRepository
@@ -28,6 +29,7 @@ class OpportunityService:
         self.lead_repository = LeadRepository(db)
         self.company_repository = CompanyRepository(db)
         self.contact_repository = ContactRepository(db)
+        self.crm_activity_repository = CRMActivityRepository(db)
 
     def list_opportunities(
         self,
@@ -141,6 +143,27 @@ class OpportunityService:
         if opportunity is None:
             opportunity = self.get_opportunity(opportunity_id)
         return sorted(OPPORTUNITY_TRANSITIONS[opportunity.status])
+
+    def list_activities(self, opportunity_id: int, *, opportunity: Opportunity | None = None):
+        if opportunity is None:
+            opportunity = self.get_opportunity(opportunity_id)
+        return self.crm_activity_repository.list_for_entity(entity_type="opportunity", entity_id=opportunity.id)
+
+    def get_next_activity(self, opportunity_id: int, *, opportunity: Opportunity | None = None):
+        if opportunity is None:
+            opportunity = self.get_opportunity(opportunity_id)
+        return self.crm_activity_repository.get_next_for_entity(entity_type="opportunity", entity_id=opportunity.id)
+
+    def count_overdue_activities(self, opportunity_id: int, *, opportunity: Opportunity | None = None) -> int:
+        if opportunity is None:
+            opportunity = self.get_opportunity(opportunity_id)
+        from app.core.time import local_now
+
+        return self.crm_activity_repository.count_overdue_for_entity(
+            entity_type="opportunity",
+            entity_id=opportunity.id,
+            reference_time=local_now(),
+        )
 
     def _resolve_relationships(
         self,

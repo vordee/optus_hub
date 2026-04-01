@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead
+from app.repositories.crm_activity_repository import CRMActivityRepository
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.lead_repository import LeadRepository
@@ -20,6 +21,7 @@ class LeadService:
         self.status_history_repository = StatusHistoryRepository(db)
         self.company_repository = CompanyRepository(db)
         self.contact_repository = ContactRepository(db)
+        self.crm_activity_repository = CRMActivityRepository(db)
 
     def list_leads(
         self,
@@ -96,6 +98,27 @@ class LeadService:
         if lead is None:
             lead = self.get_lead(lead_id)
         return self.status_history_repository.list_for_entity(entity_type="lead", entity_id=lead.id)
+
+    def list_activities(self, lead_id: int, *, lead: Lead | None = None):
+        if lead is None:
+            lead = self.get_lead(lead_id)
+        return self.crm_activity_repository.list_for_entity(entity_type="lead", entity_id=lead.id)
+
+    def get_next_activity(self, lead_id: int, *, lead: Lead | None = None):
+        if lead is None:
+            lead = self.get_lead(lead_id)
+        return self.crm_activity_repository.get_next_for_entity(entity_type="lead", entity_id=lead.id)
+
+    def count_overdue_activities(self, lead_id: int, *, lead: Lead | None = None) -> int:
+        if lead is None:
+            lead = self.get_lead(lead_id)
+        from app.core.time import local_now
+
+        return self.crm_activity_repository.count_overdue_for_entity(
+            entity_type="lead",
+            entity_id=lead.id,
+            reference_time=local_now(),
+        )
 
     def _resolve_relationships(self, company_id: int | None, contact_id: int | None) -> tuple[int | None, int | None]:
         company = self.company_repository.get_by_id(company_id) if company_id is not None else None

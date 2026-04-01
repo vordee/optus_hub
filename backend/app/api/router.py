@@ -4,6 +4,7 @@ from app.api.v1.audit import router as audit_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.companies import router as companies_router
 from app.api.v1.contacts import router as contacts_router
+from app.api.v1.crm_activities import router as crm_activities_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.health import router as health_router
 from app.api.v1.integrations import router as integrations_router
@@ -24,6 +25,7 @@ api_router.include_router(integrations_router, prefix="/v1", tags=["integrations
 api_router.include_router(audit_router, prefix="/v1/admin", tags=["audit"])
 api_router.include_router(companies_router, prefix="/v1/crm", tags=["companies"])
 api_router.include_router(contacts_router, prefix="/v1/crm", tags=["contacts"])
+api_router.include_router(crm_activities_router, prefix="/v1/crm", tags=["crm_activities"])
 api_router.include_router(leads_router, prefix="/v1/crm", tags=["leads"])
 api_router.include_router(opportunities_router, prefix="/v1/crm", tags=["opportunities"])
 api_router.include_router(projects_router, prefix="/v1", tags=["projects"])

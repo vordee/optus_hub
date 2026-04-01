@@ -1,9 +1,5 @@
-import type {
-  CRMActivityEntityType,
-  CRMActivityItem,
-  CRMActivityStatus,
-  CRMActivityType,
-} from "./types";
+import { apiRequest } from "./api";
+import type { CRMActivityEntityType, CRMActivityItem, CRMActivityStatus, CRMActivityType } from "./types";
 
 type ActivityDraft = {
   activity_type: CRMActivityType;
@@ -12,39 +8,8 @@ type ActivityDraft = {
   due_at: string;
 };
 
-const STORAGE_KEY = "optus-hub.crm-activities.v1";
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function entityKey(entityType: CRMActivityEntityType, entityId: number) {
-  return `${entityType}:${entityId}`;
-}
-
-function readStore(): Record<string, CRMActivityItem[]> {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as Record<string, CRMActivityItem[]>;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeStore(store: Record<string, CRMActivityItem[]>) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+function normalizeDueAt(value: string) {
+  return value ? `${value}T09:00:00` : null;
 }
 
 function sortActivities(items: CRMActivityItem[]) {
@@ -58,6 +23,12 @@ function sortActivities(items: CRMActivityItem[]) {
   }
 
   return [...items].sort((left, right) => {
+    const leftPending = left.status === "pending" ? 0 : 1;
+    const rightPending = right.status === "pending" ? 0 : 1;
+    if (leftPending !== rightPending) {
+      return leftPending - rightPending;
+    }
+
     const leftDue = toMillis(left.due_at);
     const rightDue = toMillis(right.due_at);
     if (leftDue !== rightDue) {
@@ -66,19 +37,6 @@ function sortActivities(items: CRMActivityItem[]) {
 
     return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
   });
-}
-
-function nextId(items: CRMActivityItem[]) {
-  return items.reduce((max, item) => Math.max(max, item.id), 0) + 1;
-}
-
-export function loadActivities(entityType: CRMActivityEntityType, entityId: number | null) {
-  if (entityId === null) {
-    return [];
-  }
-
-  const store = readStore();
-  return sortActivities(store[entityKey(entityType, entityId)] || []);
 }
 
 export function getActivitySummary(activities: CRMActivityItem[]) {
@@ -99,89 +57,56 @@ export function getActivitySummary(activities: CRMActivityItem[]) {
   };
 }
 
-export function createOrUpdateActivity(
+export async function loadActivities(entityType: CRMActivityEntityType, entityId: number) {
+  const items = await apiRequest<CRMActivityItem[]>(`/v1/crm/activities?entity_type=${entityType}&entity_id=${entityId}`);
+  return sortActivities(items);
+}
+
+export async function createOrUpdateActivity(
   entityType: CRMActivityEntityType,
   entityId: number,
   draft: ActivityDraft,
   activityId: number | null,
 ) {
-  const store = readStore();
-  const key = entityKey(entityType, entityId);
-  const items = store[key] || [];
-  const timestamp = nowIso();
+  const payload = {
+    entity_type: entityType,
+    entity_id: entityId,
+    activity_type: draft.activity_type,
+    title: draft.title,
+    note: draft.note || null,
+    due_at: normalizeDueAt(draft.due_at),
+  };
 
-  let nextItems: CRMActivityItem[];
   if (activityId === null) {
-    const activity: CRMActivityItem = {
-      id: nextId(items),
-      entity_type: entityType,
-      entity_id: entityId,
-      activity_type: draft.activity_type,
-      title: draft.title,
-      note: draft.note || null,
-      due_at: draft.due_at || null,
-      status: "pending",
-      completed_at: null,
-      created_at: timestamp,
-      updated_at: timestamp,
-      created_by_email: null,
-    };
-    nextItems = [...items, activity];
-  } else {
-    nextItems = items.map((item) =>
-      item.id === activityId
-        ? {
-            ...item,
-            activity_type: draft.activity_type,
-            title: draft.title,
-            note: draft.note || null,
-            due_at: draft.due_at || null,
-            updated_at: timestamp,
-          }
-        : item,
-    );
+    await apiRequest<CRMActivityItem>("/v1/crm/activities", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return;
   }
 
-  store[key] = sortActivities(nextItems);
-  writeStore(store);
-  return store[key];
+  await apiRequest<CRMActivityItem>(`/v1/crm/activities/${activityId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      activity_type: payload.activity_type,
+      title: payload.title,
+      note: payload.note,
+      due_at: payload.due_at,
+    }),
+  });
 }
 
-export function completeActivity(entityType: CRMActivityEntityType, entityId: number, activityId: number) {
-  const store = readStore();
-  const key = entityKey(entityType, entityId);
-  const items = store[key] || [];
-  const timestamp = nowIso();
-
-  store[key] = items.map((item) =>
-    item.id === activityId
-      ? {
-          ...item,
-          status: "done" as CRMActivityStatus,
-          completed_at: timestamp,
-          updated_at: timestamp,
-        }
-      : item,
-  );
-  writeStore(store);
-  return store[key];
+async function updateActivityStatus(activityId: number, status: CRMActivityStatus) {
+  await apiRequest<CRMActivityItem>(`/v1/crm/activities/${activityId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
-export function cancelActivity(entityType: CRMActivityEntityType, entityId: number, activityId: number) {
-  const store = readStore();
-  const key = entityKey(entityType, entityId);
-  const items = store[key] || [];
-  const timestamp = nowIso();
+export async function completeActivity(activityId: number) {
+  await updateActivityStatus(activityId, "done");
+}
 
-  store[key] = items.map((item) =>
-    item.id === activityId
-      ? {
-          ...item,
-          status: "canceled" as CRMActivityStatus,
-          updated_at: timestamp,
-        }
-      : item,
-  );
-  writeStore(store);
-  return store[key];
+export async function cancelActivity(activityId: number) {
+  await updateActivityStatus(activityId, "canceled");
 }

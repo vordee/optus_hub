@@ -459,6 +459,8 @@ export function OpportunitiesPage() {
                       <span>{item.company_name || "Sem empresa"}</span>
                       <span>{item.contact_name || "Sem contato"}</span>
                       <span>{item.lead_id ? `Lead #${item.lead_id}` : "Sem lead"}</span>
+                      {item.next_activity && <span>{item.next_activity.title}</span>}
+                      {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
                     </div>
                   </div>
                   <div className="record-list-item-side">
@@ -687,6 +689,10 @@ export function OpportunitiesPage() {
                 emptyMessage="Nenhuma atividade registrada para esta oportunidade."
                 entityId={selectedDetail.id}
                 entityType="opportunity"
+                initialActivities={selectedDetail.activities || []}
+                initialNextActivity={selectedDetail.next_activity || null}
+                initialOverdueActivityCount={selectedDetail.overdue_activity_count || 0}
+                onChanged={() => loadDetail(selectedDetail.id)}
                 title="Atividades da oportunidade"
               />
               </div>

@@ -142,3 +142,31 @@ def test_list_leads_filters_and_paginates(db_session) -> None:
     assert total == 1
     assert len(items) == 1
     assert items[0].title == "Segundo lead"
+
+
+def test_lead_activity_helpers_return_next_and_overdue(db_session) -> None:
+    from datetime import timedelta
+
+    from app.core.time import local_now
+    from app.schemas.crm_activity import CRMActivityCreateRequest
+    from app.services.crm_activity_service import CRMActivityService
+
+    service = LeadService(db_session)
+    lead = service.create_lead(LeadCreateRequest(title="Lead com agenda", status="new"))
+    CRMActivityService(db_session).create_activity(
+        CRMActivityCreateRequest(
+            entity_type="lead",
+            entity_id=lead.id,
+            title="Contato inicial",
+            due_at=local_now() - timedelta(hours=1),
+        )
+    )
+
+    next_activity = service.get_next_activity(lead.id, lead=lead)
+    overdue_count = service.count_overdue_activities(lead.id, lead=lead)
+    activities = service.list_activities(lead.id, lead=lead)
+
+    assert next_activity is not None
+    assert next_activity.title == "Contato inicial"
+    assert overdue_count == 1
+    assert len(activities) == 1

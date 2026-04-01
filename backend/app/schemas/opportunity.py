@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.crm_activity import CRMActivityResponse
 from app.schemas.status_history import StatusHistoryResponse
 
 
@@ -43,6 +44,8 @@ class OpportunityResponse(BaseModel):
     status: str
     amount: Optional[float]
     created_at: datetime
+    next_activity: Optional[CRMActivityResponse] = None
+    overdue_activity_count: int = 0
 
 
 class OpportunityProjectSummary(BaseModel):
@@ -61,6 +64,7 @@ class OpportunityListResponse(BaseModel):
 
 
 class OpportunityDetailResponse(OpportunityResponse):
+    activities: list[CRMActivityResponse]
     next_statuses: list[str]
     history: list[StatusHistoryResponse]
     linked_project: Optional[OpportunityProjectSummary] = None

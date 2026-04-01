@@ -180,3 +180,33 @@ def test_opportunity_transition_updates_history(db_session) -> None:
     assert history[0].from_status == "open"
     assert history[0].to_status == "proposal"
     assert history[0].note == "Proposta enviada"
+
+
+def test_opportunity_activity_helpers_return_next_and_overdue(db_session) -> None:
+    from datetime import timedelta
+
+    from app.core.time import local_now
+    from app.schemas.crm_activity import CRMActivityCreateRequest
+    from app.services.crm_activity_service import CRMActivityService
+
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(title="Oportunidade com agenda", status="open", amount=500)
+    )
+    CRMActivityService(db_session).create_activity(
+        CRMActivityCreateRequest(
+            entity_type="opportunity",
+            entity_id=opportunity.id,
+            title="Enviar follow-up",
+            due_at=local_now() - timedelta(hours=2),
+        )
+    )
+
+    next_activity = service.get_next_activity(opportunity.id, opportunity=opportunity)
+    overdue_count = service.count_overdue_activities(opportunity.id, opportunity=opportunity)
+    activities = service.list_activities(opportunity.id, opportunity=opportunity)
+
+    assert next_activity is not None
+    assert next_activity.title == "Enviar follow-up"
+    assert overdue_count == 1
+    assert len(activities) == 1

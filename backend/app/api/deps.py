@@ -58,3 +58,25 @@ def require_permission(permission_code: str):
                 )
 
     return dependency
+
+
+def require_any_permission(*permission_codes: str):
+    def dependency(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    ) -> None:
+        email = get_current_user_email(credentials)
+        with SessionLocal() as db:
+            user = UserRepository(db).get_by_email(email)
+            if user is None or not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authenticated user is unavailable.",
+                )
+            permissions = {permission.code for role in user.roles for permission in role.permissions}
+            if not user.is_superuser and not any(code in permissions for code in permission_codes):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions.",
+                )
+
+    return dependency

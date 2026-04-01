@@ -273,6 +273,8 @@ export function LeadsPage() {
                     <span>{item.company_name || "Sem empresa"}</span>
                     <span>{item.contact_name || "Sem contato"}</span>
                     <span>{item.source || "Origem não informada"}</span>
+                    {item.next_activity && <span>{item.next_activity.title}</span>}
+                    {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
                   </div>
                 </div>
                 <div className="record-list-item-side">
@@ -398,6 +400,10 @@ export function LeadsPage() {
                 emptyMessage="Nenhuma atividade registrada para este lead."
                 entityId={selectedDetail.id}
                 entityType="lead"
+                initialActivities={selectedDetail.activities || []}
+                initialNextActivity={selectedDetail.next_activity || null}
+                initialOverdueActivityCount={selectedDetail.overdue_activity_count || 0}
+                onChanged={() => loadDetail(selectedDetail.id)}
                 title="Atividades do lead"
               />
               </div>

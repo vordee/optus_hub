@@ -1,6 +1,7 @@
 from app.models.audit_event import AuditEvent
 from app.models.company import Company
 from app.models.contact import Contact
+from app.models.crm_activity import CRMActivity
 from app.models.lead import Lead
 from app.models.opportunity import Opportunity
 from app.models.permission import Permission
@@ -16,6 +17,7 @@ __all__ = [
     "AuditEvent",
     "Company",
     "Contact",
+    "CRMActivity",
     "Lead",
     "Opportunity",
     "Permission",

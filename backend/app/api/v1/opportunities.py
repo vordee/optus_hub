@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import get_current_user_email, require_permission
+from app.api.v1.crm_activities import serialize_activity
 from app.core.database import SessionLocal
 from app.schemas.opportunity import (
     OpportunityCreateRequest,
@@ -35,6 +36,8 @@ def serialize_opportunity(opportunity) -> OpportunityResponse:
         status=opportunity.status,
         amount=float(opportunity.amount) if opportunity.amount is not None else None,
         created_at=opportunity.created_at,
+        next_activity=serialize_activity(opportunity.next_activity) if getattr(opportunity, "next_activity", None) else None,
+        overdue_activity_count=getattr(opportunity, "overdue_activity_count", 0),
     )
 
 
@@ -98,6 +101,7 @@ def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
         linked_project = project_service.get_by_opportunity_id(opportunity_id)
         return OpportunityDetailResponse(
             **serialize_opportunity(opportunity).model_dump(),
+            activities=[serialize_activity(item) for item in service.list_activities(opportunity_id, opportunity=opportunity)],
             next_statuses=service.list_next_statuses(opportunity_id, opportunity=opportunity),
             history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id, opportunity=opportunity)],
             linked_project=(

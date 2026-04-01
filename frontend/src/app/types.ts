@@ -111,6 +111,8 @@ export interface LeadItem {
   source: string | null;
   status: string;
   created_at: string;
+  next_activity?: CRMActivityItem | null;
+  overdue_activity_count?: number;
 }
 
 export type CRMActivityEntityType = "lead" | "opportunity";
@@ -125,10 +127,12 @@ export interface CRMActivityItem {
   title: string;
   note: string | null;
   due_at: string | null;
+  owner_user_id: number | null;
+  owner_user_email: string | null;
+  owner_user_name: string | null;
   status: CRMActivityStatus;
   completed_at: string | null;
   created_at: string;
-  updated_at: string;
   created_by_email: string | null;
 }
 
@@ -169,6 +173,8 @@ export interface OpportunityItem {
   status: string;
   amount: number | null;
   created_at: string;
+  next_activity?: CRMActivityItem | null;
+  overdue_activity_count?: number;
 }
 
 export interface OpportunityListResponse {

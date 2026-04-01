@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { ApiError } from "./api";
 import { AppIcon } from "./icons";
 import { QuickFormModal } from "./QuickFormModal";
 import type {
@@ -29,6 +30,10 @@ type ActivityPanelProps = {
   emptyMessage: string;
   contextLabel: string;
   onActivityCountChange?: (count: number) => void;
+  initialActivities?: CRMActivityItem[];
+  initialNextActivity?: CRMActivityItem | null;
+  initialOverdueActivityCount?: number;
+  onChanged?: () => void | Promise<void>;
 };
 
 const EMPTY_DRAFT: ActivityDraft = {
@@ -79,14 +84,32 @@ export function ActivityPanel({
   emptyMessage,
   contextLabel,
   onActivityCountChange,
+  initialActivities = [],
+  initialNextActivity = null,
+  initialOverdueActivityCount = 0,
+  onChanged,
 }: ActivityPanelProps) {
-  const [version, setVersion] = useState(0);
+  const [activities, setActivities] = useState<CRMActivityItem[]>(initialActivities);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<CRMActivityItem | null>(null);
   const [draft, setDraft] = useState<ActivityDraft>(EMPTY_DRAFT);
 
-  const activities = useMemo(() => loadActivities(entityType, entityId), [entityId, entityType, version]);
-  const summary = useMemo(() => getActivitySummary(activities), [activities]);
+  useEffect(() => {
+    setActivities(initialActivities);
+  }, [initialActivities]);
+
+  const summary = useMemo(() => {
+    if (activities.length > 0) {
+      return getActivitySummary(activities);
+    }
+
+    return {
+      nextActivity: initialNextActivity,
+      overdueActivityCount: initialOverdueActivityCount,
+    };
+  }, [activities, initialNextActivity, initialOverdueActivityCount]);
 
   useEffect(() => {
     onActivityCountChange?.(activities.length);
@@ -107,8 +130,23 @@ export function ActivityPanel({
     }
   }, [editingActivity, isOpen]);
 
-  function refresh() {
-    setVersion((current) => current + 1);
+  async function refresh() {
+    if (entityId === null) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      setActivities(await loadActivities(entityType, entityId));
+      setPanelError(null);
+      if (onChanged) {
+        await onChanged();
+      }
+    } catch (error) {
+      setPanelError(error instanceof ApiError ? error.message : "Falha ao carregar atividades.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openCreate() {
@@ -132,33 +170,37 @@ export function ActivityPanel({
     setDraft(EMPTY_DRAFT);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (entityId === null) {
       return;
     }
 
-    createOrUpdateActivity(entityType, entityId, draft, editingActivity?.id ?? null);
-    refresh();
-    closeModal();
+    try {
+      await createOrUpdateActivity(entityType, entityId, draft, editingActivity?.id ?? null);
+      await refresh();
+      closeModal();
+    } catch (error) {
+      setPanelError(error instanceof ApiError ? error.message : "Falha ao salvar atividade.");
+    }
   }
 
-  function handleComplete(activity: CRMActivityItem) {
-    if (entityId === null) {
-      return;
+  async function handleComplete(activity: CRMActivityItem) {
+    try {
+      await completeActivity(activity.id);
+      await refresh();
+    } catch (error) {
+      setPanelError(error instanceof ApiError ? error.message : "Falha ao concluir atividade.");
     }
-
-    completeActivity(entityType, entityId, activity.id);
-    refresh();
   }
 
-  function handleCancel(activity: CRMActivityItem) {
-    if (entityId === null) {
-      return;
+  async function handleCancel(activity: CRMActivityItem) {
+    try {
+      await cancelActivity(activity.id);
+      await refresh();
+    } catch (error) {
+      setPanelError(error instanceof ApiError ? error.message : "Falha ao cancelar atividade.");
     }
-
-    cancelActivity(entityType, entityId, activity.id);
-    refresh();
   }
 
   if (entityId === null) {
@@ -197,6 +239,9 @@ export function ActivityPanel({
         </div>
       </div>
 
+      {panelError && <div className="inline-error">{panelError}</div>}
+      {loading && <div className="empty-state-panel">Atualizando atividades...</div>}
+
       {summary.nextActivity && (
         <div className={isPastDue(summary.nextActivity.due_at) ? "inline-note overdue-note" : "inline-note"}>
           <strong>Próxima ação</strong>
@@ -220,6 +265,7 @@ export function ActivityPanel({
               <div className="detail-meta detail-meta-compact">
                 <span>{formatDate(activity.due_at)}</span>
                 <span>{activity.completed_at ? "Concluída" : "Aberta"}</span>
+                {activity.owner_user_name && <span>{activity.owner_user_name}</span>}
               </div>
               {activity.note && <p className="activity-note">{activity.note}</p>}
             </div>

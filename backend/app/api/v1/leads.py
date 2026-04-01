@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import get_current_user_email, require_permission
+from app.api.v1.crm_activities import serialize_activity
 from app.core.database import SessionLocal
 from app.schemas.lead import LeadCreateRequest, LeadDetailResponse, LeadListResponse, LeadResponse, LeadUpdateRequest
 from app.schemas.status_history import StatusHistoryResponse
@@ -22,6 +23,8 @@ def serialize_lead(lead) -> LeadResponse:
         source=lead.source,
         status=lead.status,
         created_at=lead.created_at,
+        next_activity=serialize_activity(lead.next_activity) if getattr(lead, "next_activity", None) else None,
+        overdue_activity_count=getattr(lead, "overdue_activity_count", 0),
     )
 
 
@@ -57,6 +60,7 @@ def get_lead(lead_id: int) -> LeadDetailResponse:
         lead = service.get_lead(lead_id)
         return LeadDetailResponse(
             **serialize_lead(lead).model_dump(),
+            activities=[serialize_activity(item) for item in service.list_activities(lead_id, lead=lead)],
             history=[serialize_status_history(item) for item in service.list_status_history(lead_id, lead=lead)],
         )
 
