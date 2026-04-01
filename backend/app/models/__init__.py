@@ -10,6 +10,7 @@ from app.models.project_checklist_item import ProjectChecklistItem
 from app.models.project_phase import ProjectPhase
 from app.models.project_task import ProjectTask
 from app.models.role import Role
+from app.models.saved_view import SavedView
 from app.models.status_history import StatusHistory
 from app.models.user import User
 
@@ -26,6 +27,7 @@ __all__ = [
     "ProjectPhase",
     "ProjectTask",
     "Role",
+    "SavedView",
     "StatusHistory",
     "User",
 ]

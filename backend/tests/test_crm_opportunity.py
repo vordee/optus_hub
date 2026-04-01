@@ -129,6 +129,78 @@ def test_list_opportunities_filters_and_paginates(db_session) -> None:
     assert items[0].title == "Segunda oportunidade"
 
 
+def test_list_opportunities_supports_compound_filters_and_safe_sort(db_session) -> None:
+    company = CompanyService(db_session).create_company(
+        CompanyCreateRequest(legal_name="Empresa Oportunidade", tax_id="12345678000199")
+    )
+    contact = ContactService(db_session).create_contact(
+        ContactCreateRequest(company_id=company.id, full_name="Contato Oportunidade")
+    )
+    lead = LeadService(db_session).create_lead(
+        LeadCreateRequest(contact_id=contact.id, title="Lead base", status="qualified")
+    )
+    service = OpportunityService(db_session)
+    service.create_opportunity(
+        OpportunityCreateRequest(lead_id=lead.id, company_id=company.id, contact_id=contact.id, title="B opp", status="open", amount=2000)
+    )
+    service.create_opportunity(
+        OpportunityCreateRequest(lead_id=lead.id, company_id=company.id, contact_id=contact.id, title="A opp", status="open", amount=1000)
+    )
+
+    items, total = service.list_opportunities(
+        query="opp",
+        status="open",
+        company_id=company.id,
+        contact_id=contact.id,
+        lead_id=lead.id,
+        sort_by="amount",
+        sort_direction="asc",
+        page=1,
+        page_size=10,
+    )
+
+    assert total == 2
+    assert [item.title for item in items] == ["A opp", "B opp"]
+
+
+def test_saved_view_applies_to_opportunity_listing(db_session) -> None:
+    from app.schemas.saved_view import SavedViewCreateRequest
+    from app.services.saved_view_service import SavedViewService
+
+    company = CompanyService(db_session).create_company(
+        CompanyCreateRequest(legal_name="Empresa Saved Opp", tax_id="99999999000199")
+    )
+    contact = ContactService(db_session).create_contact(
+        ContactCreateRequest(company_id=company.id, full_name="Contato Saved Opp")
+    )
+    lead = LeadService(db_session).create_lead(
+        LeadCreateRequest(contact_id=contact.id, title="Lead base", status="qualified")
+    )
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(lead_id=lead.id, company_id=company.id, contact_id=contact.id, title="Oportunidade selecionada", status="open", amount=2000)
+    )
+    service.create_opportunity(
+        OpportunityCreateRequest(lead_id=lead.id, company_id=company.id, contact_id=contact.id, title="Oportunidade ignorada", status="open", amount=1000)
+    )
+
+    view = SavedViewService(db_session).create_view(
+        SavedViewCreateRequest(
+            module="opportunities",
+            name="Oportunidades abertas",
+            filters_json={"company_id": company.id, "lead_id": lead.id},
+            sort_by="amount",
+            sort_direction="asc",
+        )
+    )
+
+    items, total = service.list_opportunities(saved_view_id=view.id, page=1, page_size=10)
+
+    assert total == 2
+    assert len(items) == 2
+    assert items[0].id != opportunity.id
+
+
 def test_opportunity_transition_requires_amount_for_proposal(db_session) -> None:
     service = OpportunityService(db_session)
     opportunity = service.create_opportunity(

@@ -14,6 +14,7 @@ from app.api.v1.project_checklists import router as project_checklists_router
 from app.api.v1.project_phases import router as project_phases_router
 from app.api.v1.projects import router as projects_router
 from app.api.v1.project_tasks import router as project_tasks_router
+from app.api.v1.saved_views import router as saved_views_router
 from app.api.v1.roles import router as roles_router
 from app.api.v1.users import router as users_router
 
@@ -28,6 +29,7 @@ api_router.include_router(contacts_router, prefix="/v1/crm", tags=["contacts"])
 api_router.include_router(crm_activities_router, prefix="/v1/crm", tags=["crm_activities"])
 api_router.include_router(leads_router, prefix="/v1/crm", tags=["leads"])
 api_router.include_router(opportunities_router, prefix="/v1/crm", tags=["opportunities"])
+api_router.include_router(saved_views_router, prefix="/v1/crm", tags=["saved_views"])
 api_router.include_router(projects_router, prefix="/v1", tags=["projects"])
 api_router.include_router(project_phases_router, prefix="/v1", tags=["project_phases"])
 api_router.include_router(project_checklists_router, prefix="/v1", tags=["project_checklists"])

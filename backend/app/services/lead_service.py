@@ -10,6 +10,7 @@ from app.repositories.contact_repository import ContactRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.status_history_repository import StatusHistoryRepository
 from app.schemas.lead import LeadCreateRequest, LeadUpdateRequest
+from app.services.saved_view_service import SavedViewService
 
 LEAD_STATUSES = {"new", "qualified", "diagnosis", "proposal", "won", "lost"}
 
@@ -28,11 +29,28 @@ class LeadService:
         *,
         query: str | None = None,
         status: str | None = None,
+        company_id: int | None = None,
+        contact_id: int | None = None,
+        source: str | None = None,
+        sort_by: str = "created_at",
+        sort_direction: str = "desc",
+        saved_view_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Lead], int]:
-        items = self.lead_repository.list_filtered(query=query, status=status, page=page, page_size=page_size)
-        total = self.lead_repository.count_filtered(query=query, status=status)
+        filters, sort_options = self._resolve_list_options(
+            module="leads",
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            source=source,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+            saved_view_id=saved_view_id,
+        )
+        items = self.lead_repository.list_filtered(page=page, page_size=page_size, **filters, **sort_options)
+        total = self.lead_repository.count_filtered(**filters)
         return items, total
 
     def get_lead(self, lead_id: int) -> Lead:
@@ -155,3 +173,70 @@ class LeadService:
             return None
         normalized = value.strip()
         return normalized or None
+
+    def _resolve_list_options(
+        self,
+        *,
+        module: str,
+        query: str | None,
+        status: str | None,
+        company_id: int | None,
+        contact_id: int | None,
+        source: str | None,
+        sort_by: str,
+        sort_direction: str,
+        saved_view_id: int | None,
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        if saved_view_id is not None:
+            view = SavedViewService(self.db).get_view(saved_view_id, module=module)
+            filters, sort_options = self._normalize_view_filters(
+                module=module,
+                filters=view.filters_json,
+                sort_by=view.sort_by,
+                sort_direction=view.sort_direction,
+            )
+            return filters, sort_options
+        return self._normalize_view_filters(
+            module=module,
+            filters={
+                "query": query,
+                "status": status,
+                "company_id": company_id,
+                "contact_id": contact_id,
+                "source": source,
+            },
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+        )
+
+    def _normalize_view_filters(
+        self,
+        *,
+        module: str,
+        filters: dict,
+        sort_by: str | None,
+        sort_direction: str | None,
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        from app.services.saved_view_service import SAVED_VIEW_FILTER_KEYS, SAVED_VIEW_SORT_DIRECTIONS, SAVED_VIEW_SORT_FIELDS
+
+        allowed_keys = SAVED_VIEW_FILTER_KEYS[module]
+        normalized: dict[str, object] = {"query": None, "status": None, "company_id": None, "contact_id": None, "source": None}
+        for key, value in filters.items():
+            if key not in allowed_keys:
+                continue
+            if key in {"query", "status", "source"}:
+                normalized[key] = self._normalize_optional(value if value is None else str(value))
+            else:
+                normalized[key] = int(value) if value is not None else None
+        normalized_sort_by = self._normalize_optional(sort_by)
+        normalized_sort_direction = (sort_direction or "desc").strip().lower()
+        if normalized_sort_direction not in SAVED_VIEW_SORT_DIRECTIONS:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid sort direction.")
+        if normalized_sort_by is not None and normalized_sort_by not in SAVED_VIEW_SORT_FIELDS[module]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid sort field.")
+        filters = {key: value for key, value in normalized.items() if value is not None}
+        sort_options = {
+            "sort_by": normalized_sort_by or "created_at",
+            "sort_direction": normalized_sort_direction,
+        }
+        return filters, sort_options

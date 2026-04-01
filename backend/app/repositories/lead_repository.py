@@ -42,10 +42,23 @@ class LeadRepository:
         *,
         query: str | None = None,
         status: str | None = None,
+        company_id: int | None = None,
+        contact_id: int | None = None,
+        source: str | None = None,
+        sort_by: str = "created_at",
+        sort_direction: str = "desc",
         page: int = 1,
         page_size: int = 20,
     ) -> list[LeadListItem]:
-        stmt = self._build_filtered_list_stmt(query=query, status=status)
+        stmt = self._build_filtered_list_stmt(
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            source=source,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+        )
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
         rows = self.db.execute(stmt).all()
         return [
@@ -64,13 +77,29 @@ class LeadRepository:
             for row in rows
         ]
 
-    def count_filtered(self, *, query: str | None = None, status: str | None = None) -> int:
-        stmt = select(func.count()).select_from(Lead)
-        if status:
-            stmt = stmt.where(Lead.status == status)
-        if query:
-            term = f"%{query.lower()}%"
-            stmt = stmt.where(or_(func.lower(Lead.title).like(term), func.lower(func.coalesce(Lead.source, "")).like(term)))
+    def count_filtered(
+        self,
+        *,
+        query: str | None = None,
+        status: str | None = None,
+        company_id: int | None = None,
+        contact_id: int | None = None,
+        source: str | None = None,
+    ) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(Lead)
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .outerjoin(Contact, Contact.id == Lead.contact_id)
+        )
+        stmt = self._apply_filters(
+            stmt,
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            source=source,
+        )
         return int(self.db.execute(stmt).scalar_one())
 
     def get_by_id(self, lead_id: int) -> Optional[Lead]:
@@ -104,20 +133,92 @@ class LeadRepository:
         self.db.refresh(lead)
         return lead
 
-    def _build_filtered_stmt(self, *, query: str | None, status: str | None):
+    def _apply_filters(
+        self,
+        stmt,
+        *,
+        query: str | None,
+        status: str | None,
+        company_id: int | None,
+        contact_id: int | None,
+        source: str | None,
+    ):
+        if status:
+            stmt = stmt.where(Lead.status == status)
+        if company_id is not None:
+            stmt = stmt.where(Lead.company_id == company_id)
+        if contact_id is not None:
+            stmt = stmt.where(Lead.contact_id == contact_id)
+        if source:
+            stmt = stmt.where(func.lower(func.coalesce(Lead.source, "")).like(f"%{source.lower()}%"))
+        if query:
+            term = f"%{query.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(Lead.title).like(term),
+                    func.lower(func.coalesce(Lead.source, "")).like(term),
+                    func.lower(func.coalesce(Company.legal_name, "")).like(term),
+                    func.lower(func.coalesce(Contact.full_name, "")).like(term),
+                )
+            )
+        return stmt
+
+    def _resolve_sort_column(self, sort_by: str):
+        sort_map = {
+            "created_at": Lead.created_at,
+            "title": Lead.title,
+            "status": Lead.status,
+            "source": Lead.source,
+            "company_name": Company.legal_name,
+            "contact_name": Contact.full_name,
+        }
+        return sort_map.get(sort_by, Lead.created_at)
+
+    def _apply_sort(self, stmt, *, sort_by: str, sort_direction: str):
+        column = self._resolve_sort_column(sort_by)
+        if sort_direction == "asc":
+            return stmt.order_by(column.asc().nulls_last(), Lead.id.asc())
+        return stmt.order_by(column.desc().nulls_last(), Lead.id.desc())
+
+    def _build_filtered_stmt(
+        self,
+        *,
+        query: str | None,
+        status: str | None,
+        company_id: int | None,
+        contact_id: int | None,
+        source: str | None,
+        sort_by: str,
+        sort_direction: str,
+    ):
         stmt = (
             select(Lead)
             .options(joinedload(Lead.company), joinedload(Lead.contact))
-            .order_by(Lead.created_at.desc(), Lead.id.desc())
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .outerjoin(Contact, Contact.id == Lead.contact_id)
         )
-        if status:
-            stmt = stmt.where(Lead.status == status)
-        if query:
-            term = f"%{query.lower()}%"
-            stmt = stmt.where(or_(func.lower(Lead.title).like(term), func.lower(func.coalesce(Lead.source, "")).like(term)))
+        stmt = self._apply_filters(
+            stmt,
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            source=source,
+        )
+        stmt = self._apply_sort(stmt, sort_by=sort_by, sort_direction=sort_direction)
         return stmt
 
-    def _build_filtered_list_stmt(self, *, query: str | None, status: str | None):
+    def _build_filtered_list_stmt(
+        self,
+        *,
+        query: str | None,
+        status: str | None,
+        company_id: int | None,
+        contact_id: int | None,
+        source: str | None,
+        sort_by: str,
+        sort_direction: str,
+    ):
         stmt = (
             select(
                 Lead.id.label("id"),
@@ -133,11 +234,14 @@ class LeadRepository:
             )
             .outerjoin(Company, Company.id == Lead.company_id)
             .outerjoin(Contact, Contact.id == Lead.contact_id)
-            .order_by(Lead.created_at.desc(), Lead.id.desc())
         )
-        if status:
-            stmt = stmt.where(Lead.status == status)
-        if query:
-            term = f"%{query.lower()}%"
-            stmt = stmt.where(or_(func.lower(Lead.title).like(term), func.lower(func.coalesce(Lead.source, "")).like(term)))
+        stmt = self._apply_filters(
+            stmt,
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            source=source,
+        )
+        stmt = self._apply_sort(stmt, sort_by=sort_by, sort_direction=sort_direction)
         return stmt

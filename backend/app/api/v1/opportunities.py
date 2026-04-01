@@ -80,11 +80,28 @@ def serialize_project(project) -> ProjectResponse:
 def list_opportunities(
     query: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    company_id: int | None = Query(default=None, ge=1),
+    contact_id: int | None = Query(default=None, ge=1),
+    lead_id: int | None = Query(default=None, ge=1),
+    sort_by: str = Query(default="created_at"),
+    sort_direction: str = Query(default="desc"),
+    saved_view_id: int | None = Query(default=None, ge=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
 ) -> OpportunityListResponse:
     with SessionLocal() as db:
-        items, total = OpportunityService(db).list_opportunities(query=query, status=status, page=page, page_size=page_size)
+        items, total = OpportunityService(db).list_opportunities(
+            query=query,
+            status=status,
+            company_id=company_id,
+            contact_id=contact_id,
+            lead_id=lead_id,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+            saved_view_id=saved_view_id,
+            page=page,
+            page_size=page_size,
+        )
         return OpportunityListResponse(items=[serialize_opportunity(opportunity) for opportunity in items], total=total, page=page, page_size=page_size)
 
 

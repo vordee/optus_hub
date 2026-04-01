@@ -144,6 +144,62 @@ def test_list_leads_filters_and_paginates(db_session) -> None:
     assert items[0].title == "Segundo lead"
 
 
+def test_list_leads_supports_compound_filters_and_safe_sort(db_session) -> None:
+    company = CompanyService(db_session).create_company(
+        CompanyCreateRequest(legal_name="Empresa Filtro", tax_id="12345678000199")
+    )
+    contact = ContactService(db_session).create_contact(
+        ContactCreateRequest(company_id=company.id, full_name="Cliente Filtro")
+    )
+    service = LeadService(db_session)
+    service.create_lead(LeadCreateRequest(company_id=company.id, contact_id=contact.id, title="B lead", source="site"))
+    service.create_lead(LeadCreateRequest(company_id=company.id, contact_id=contact.id, title="A lead", source="site"))
+    service.create_lead(LeadCreateRequest(title="Outro lead", source="indicação"))
+
+    items, total = service.list_leads(
+        query="lead",
+        status="new",
+        company_id=company.id,
+        contact_id=contact.id,
+        source="site",
+        sort_by="title",
+        sort_direction="asc",
+        page=1,
+        page_size=10,
+    )
+
+    assert total == 2
+    assert [item.title for item in items] == ["A lead", "B lead"]
+
+
+def test_saved_view_applies_to_lead_listing(db_session) -> None:
+    from app.schemas.saved_view import SavedViewCreateRequest
+    from app.services.saved_view_service import SavedViewService
+
+    company = CompanyService(db_session).create_company(
+        CompanyCreateRequest(legal_name="Empresa Saved View", tax_id="99999999000199")
+    )
+    service = LeadService(db_session)
+    lead = service.create_lead(LeadCreateRequest(company_id=company.id, title="Lead escolhido", source="site"))
+    service.create_lead(LeadCreateRequest(company_id=company.id, title="Lead ignorado", source="indicação"))
+
+    view = SavedViewService(db_session).create_view(
+        SavedViewCreateRequest(
+            module="leads",
+            name="Leads de site",
+            filters_json={"company_id": company.id, "source": "site"},
+            sort_by="title",
+            sort_direction="asc",
+        )
+    )
+
+    items, total = service.list_leads(saved_view_id=view.id, page=1, page_size=10)
+
+    assert total == 1
+    assert len(items) == 1
+    assert items[0].id == lead.id
+
+
 def test_lead_activity_helpers_return_next_and_overdue(db_session) -> None:
     from datetime import timedelta
 
