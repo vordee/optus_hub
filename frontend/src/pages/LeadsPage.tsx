@@ -16,6 +16,7 @@ export function LeadsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [leadView, setLeadView] = useState<"painel" | "cadastro">("painel");
   const [form, setForm] = useState({
     contact_id: "",
     title: "",
@@ -64,6 +65,7 @@ export function LeadsPage() {
 
   function populate(item: LeadItem) {
     setSelectedId(item.id);
+    setLeadView("painel");
     setForm({
       contact_id: item.contact_id ? String(item.contact_id) : "",
       title: item.title,
@@ -108,6 +110,7 @@ export function LeadsPage() {
       }
       setSelectedId(null);
       setSelectedDetail(null);
+      setLeadView("painel");
       setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
       await loadLeads();
     } catch (submitError) {
@@ -121,11 +124,27 @@ export function LeadsPage() {
         <div className="section-heading">
           <span className="eyebrow">CRM</span>
           <h3>Leads</h3>
+          <p className="section-copy">
+            Trabalhe o lead pela lista e mantenha o contexto do registro aberto no painel, não no formulário.
+          </p>
         </div>
         {error && <div className="inline-error">{error}</div>}
         <div className="toolbar">
-          <input placeholder="Buscar por título ou origem" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} />
-          <select value={filterStatus} onChange={(event) => { setPage(1); setFilterStatus(event.target.value); }}>
+          <input
+            placeholder="Buscar por título ou origem"
+            value={query}
+            onChange={(event) => {
+              setPage(1);
+              setQuery(event.target.value);
+            }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(event) => {
+              setPage(1);
+              setFilterStatus(event.target.value);
+            }}
+          >
             <option value="">Todos os status</option>
             {LEAD_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -173,11 +192,7 @@ export function LeadsPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr
-                  key={item.id}
-                  className={selectedId === item.id ? "selected-row" : ""}
-                  onClick={() => populate(item)}
-                >
+                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>
@@ -198,115 +213,143 @@ export function LeadsPage() {
       </article>
 
       <article className="card">
-        <form className="form-card" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Contato</span>
-            <select
-              value={form.contact_id}
-              onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}
-            >
-              <option value="">Sem vínculo</option>
-              {safeContacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Título</span>
-            <input
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Descrição</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Origem</span>
-            <input
-              value={form.source}
-              onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Status</span>
-            <select
-              value={form.status}
-              onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-            >
-              {LEAD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {formatLeadStatus(status)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="primary-button" type="submit">
-            {selectedId === null ? "Criar lead" : "Atualizar lead"}
+        <div className="panel-switcher">
+          <button className={leadView === "painel" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("painel")} type="button">
+            Painel do lead
           </button>
-        </form>
-        {selectedDetail && (
-          <div className="detail-panel">
-            <div className="detail-hero">
-              <div className="detail-badges">
-                <span className={`status-pill status-${selectedDetail.status}`}>{formatLeadStatus(selectedDetail.status)}</span>
-                <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
+          <button className={leadView === "cadastro" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("cadastro")} type="button">
+            Cadastro
+          </button>
+        </div>
+
+        {leadView === "painel" ? (
+          selectedDetail ? (
+            <div className="detail-panel detail-panel-standalone">
+              <div className="detail-hero">
+                <div className="detail-badges">
+                  <span className={`status-pill status-${selectedDetail.status}`}>{formatLeadStatus(selectedDetail.status)}</span>
+                  <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
+                </div>
+                <div className="section-heading">
+                  <span className="eyebrow">Registro em foco</span>
+                  <h3>{selectedDetail.title}</h3>
+                </div>
+                <div className="detail-meta detail-meta-dense">
+                  <span>{selectedDetail.company_name || "Sem empresa"}</span>
+                  <span>{selectedDetail.contact_name || "Sem contato"}</span>
+                  <span>{formatDateTime(selectedDetail.created_at)}</span>
+                </div>
+                <p>{selectedDetail.description || "Sem descrição."}</p>
               </div>
-              <div className="section-heading">
-                <span className="eyebrow">Lead selecionado</span>
-                <h3>{selectedDetail.title}</h3>
+
+              <div className="record-action-bar">
+                <div className="helper-card">
+                  <strong>Próxima leitura</strong>
+                  <p>
+                    {selectedDetail.status === "new" && "Validar origem e qualificar a necessidade."}
+                    {selectedDetail.status === "qualified" && "Entrar em diagnóstico com informações completas."}
+                    {selectedDetail.status === "diagnosis" && "Consolidar escopo para avançar à proposta."}
+                    {selectedDetail.status === "proposal" && "Negociar e decidir avanço ou perda."}
+                    {selectedDetail.status === "won" && "Lead convertido. Siga para oportunidade ou operação."}
+                    {selectedDetail.status === "lost" && "Lead encerrado. Registrar aprendizado comercial."}
+                  </p>
+                </div>
+                <div className="helper-card">
+                  <strong>Contato principal</strong>
+                  <p>{selectedDetail.contact_name || "Sem contato principal vinculado."}</p>
+                </div>
               </div>
-              <div className="detail-meta detail-meta-dense">
-                <span>{selectedDetail.company_name || "Sem empresa"}</span>
-                <span>{selectedDetail.contact_name || "Sem contato"}</span>
-                <span>{formatDateTime(selectedDetail.created_at)}</span>
+
+              <div className="crm-context-grid">
+                <div className="metric-card">
+                  <span>Contato</span>
+                  <strong>{selectedDetail.contact_name || "-"}</strong>
+                  <small>vínculo principal</small>
+                </div>
+                <div className="metric-card">
+                  <span>Empresa</span>
+                  <strong>{selectedDetail.company_name || "-"}</strong>
+                  <small>conta associada</small>
+                </div>
+                <div className="metric-card">
+                  <span>Origem</span>
+                  <strong>{selectedDetail.source || "-"}</strong>
+                  <small>canal capturado</small>
+                </div>
+                <div className="metric-card">
+                  <span>Eventos</span>
+                  <strong>{safeHistory.length}</strong>
+                  <small>mudanças registradas</small>
+                </div>
               </div>
-              <p>{selectedDetail.description || "Sem descrição."}</p>
+
+              <div className="detail-section">
+                <div className="section-heading">
+                  <span className="eyebrow">Timeline</span>
+                  <h3>Histórico do lead</h3>
+                </div>
+                <ul className="history-list history-list-timeline">
+                  {safeHistory.map((entry) => (
+                    <li key={entry.id}>
+                      <strong>{formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}</strong>
+                      <span>{entry.note || entry.changed_by_email || "-"}</span>
+                      <small>{formatDateTime(entry.changed_at)}</small>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="crm-context-grid">
-              <div className="metric-card">
-                <span>Contato</span>
-                <strong>{selectedDetail.contact_name || "-"}</strong>
-                <small>vínculo principal</small>
-              </div>
-              <div className="metric-card">
-                <span>Empresa</span>
-                <strong>{selectedDetail.company_name || "-"}</strong>
-                <small>conta associada</small>
-              </div>
-              <div className="metric-card">
-                <span>Origem</span>
-                <strong>{selectedDetail.source || "-"}</strong>
-                <small>canal capturado</small>
-              </div>
-              <div className="metric-card">
-                <span>Eventos</span>
-                <strong>{selectedDetail.history.length}</strong>
-                <small>mudanças registradas</small>
-              </div>
+          ) : (
+            <div className="empty-state-panel">
+              <strong>Selecione um lead na lista</strong>
+              <p>O painel do lead concentra contexto, leitura da etapa e histórico sem cair direto em edição.</p>
             </div>
-            <div className="detail-section">
-              <div className="section-heading">
-                <span className="eyebrow">Timeline</span>
-                <h3>Histórico do lead</h3>
-              </div>
-            <ul className="history-list history-list-timeline">
-              {safeHistory.map((entry) => (
-                <li key={entry.id}>
-                  <strong>{formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}</strong>
-                  <span>{entry.note || entry.changed_by_email || "-"}</span>
-                  <small>{formatDateTime(entry.changed_at)}</small>
-                </li>
-              ))}
-            </ul>
+          )
+        ) : (
+          <form className="form-card" onSubmit={handleSubmit}>
+            <div className="section-heading">
+              <span className="eyebrow">Cadastro</span>
+              <h3>{selectedId === null ? "Novo lead" : "Editar lead"}</h3>
             </div>
-          </div>
+            <label className="field">
+              <span>Contato</span>
+              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
+                <option value="">Sem vínculo</option>
+                {safeContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.full_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Título</span>
+              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Descrição</span>
+              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Origem</span>
+              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Status</span>
+              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatLeadStatus(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-actions">
+              <button className="primary-button" type="submit">
+                {selectedId === null ? "Criar lead" : "Atualizar lead"}
+              </button>
+            </div>
+          </form>
         )}
       </article>
     </section>
