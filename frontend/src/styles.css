@@ -1238,15 +1238,15 @@ tbody tr[role="button"]:focus-visible td {
 }
 
 .sidebar .ghost-button {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #edf3f8;
+  background: rgba(52, 78, 108, 0.96);
+  border-color: rgba(147, 185, 220, 0.26);
+  color: #f8fbff;
 }
 
 .sidebar .ghost-button:hover,
 .sidebar .ghost-button:focus-visible {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(67, 99, 136, 0.98);
+  border-color: rgba(168, 200, 230, 0.32);
 }
 
 .inline-error {
