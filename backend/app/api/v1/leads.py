@@ -14,9 +14,9 @@ def serialize_lead(lead) -> LeadResponse:
     return LeadResponse(
         id=lead.id,
         company_id=lead.company_id,
-        company_name=lead.company.legal_name if lead.company else None,
+        company_name=getattr(lead, "company_name", None) or (lead.company.legal_name if getattr(lead, "company", None) else None),
         contact_id=lead.contact_id,
-        contact_name=lead.contact.full_name if lead.contact else None,
+        contact_name=getattr(lead, "contact_name", None) or (lead.contact.full_name if getattr(lead, "contact", None) else None),
         title=lead.title,
         description=lead.description,
         source=lead.source,
@@ -52,9 +52,9 @@ def list_leads(
 
 @router.get("/leads/{lead_id}", response_model=LeadDetailResponse, dependencies=[Depends(require_permission("leads:read"))])
 def get_lead(lead_id: int) -> LeadDetailResponse:
-        with SessionLocal() as db:
-            service = LeadService(db)
-            lead = service.get_lead(lead_id)
+    with SessionLocal() as db:
+        service = LeadService(db)
+        lead = service.get_lead(lead_id)
         return LeadDetailResponse(
             **serialize_lead(lead).model_dump(),
             history=[serialize_status_history(item) for item in service.list_status_history(lead_id, lead=lead)],

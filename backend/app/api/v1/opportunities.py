@@ -25,9 +25,11 @@ def serialize_opportunity(opportunity) -> OpportunityResponse:
         id=opportunity.id,
         lead_id=opportunity.lead_id,
         company_id=opportunity.company_id,
-        company_name=opportunity.company.legal_name if opportunity.company else None,
+        company_name=getattr(opportunity, "company_name", None)
+        or (opportunity.company.legal_name if getattr(opportunity, "company", None) else None),
         contact_id=opportunity.contact_id,
-        contact_name=opportunity.contact.full_name if opportunity.contact else None,
+        contact_name=getattr(opportunity, "contact_name", None)
+        or (opportunity.contact.full_name if getattr(opportunity, "contact", None) else None),
         title=opportunity.title,
         description=opportunity.description,
         status=opportunity.status,
