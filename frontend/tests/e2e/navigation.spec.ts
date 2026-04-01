@@ -6,10 +6,10 @@ test("main modules are reachable from grouped navigation", async ({ page }) => {
   await login(page);
 
   const sidebar = page.locator(".sidebar");
-  await expect(sidebar.locator(".nav-group-title", { hasText: "Visão Geral" })).toBeVisible();
-  await expect(sidebar.locator(".nav-group-title", { hasText: "Administração" })).toBeVisible();
-  await expect(sidebar.locator(".nav-group-title", { hasText: "CRM" })).toBeVisible();
-  await expect(sidebar.locator(".nav-group-title", { hasText: "Operação" })).toBeVisible();
+  await expect(sidebar.locator(".nav-group-title", { hasText: "Painel" })).toBeVisible();
+  await expect(sidebar.locator(".nav-group-title", { hasText: "Fluxo comercial" })).toBeVisible();
+  await expect(sidebar.locator(".nav-group-title", { hasText: "Entrega" })).toBeVisible();
+  await expect(sidebar.locator(".nav-group-title", { hasText: "Governança" })).toBeVisible();
 
   await page.getByRole("button", { name: /Empresas/i }).click();
   await expect(page.locator(".topbar h2")).toHaveText("Empresas");

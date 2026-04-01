@@ -1,6 +1,6 @@
 # Runtime Current State
 
-Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `d5fdc9b`.
+Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `3fac6e6`.
 
 Use este arquivo como fonte de verdade operacional para humanos e agentes antes de qualquer novo deploy, troubleshooting ou continuidade de implementacao.
 
@@ -22,7 +22,7 @@ Existem dois caminhos diferentes para frontend e isso precisa continuar explicit
 
 No estado atual, `/var/www/optus-hub/frontend` e um link simbolico para o release ativo:
 
-- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-d5fdc9b-20260401111457`
+- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-3fac6e6-20260401114139`
 
 ## Nginx
 
@@ -123,11 +123,20 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 
 ## Estado publicado nesta entrega
 
-- commit publicado: `d5fdc9b`
-- release ativo: `/var/www/optus-hub/releases/frontend-d5fdc9b-20260401111457`
+- commit publicado: `3fac6e6`
+- release ativo: `/var/www/optus-hub/releases/frontend-3fac6e6-20260401114139`
 - assets servidos apos publicacao:
-  - `index-DKif23-U.js`
-  - `index-hkhM3qCy.css`
+  - `index-DchCKeFl.js`
+  - `index-CH2S46ni.css`
+
+## Validacao operacional desta entrega
+
+- `npm run build` em `/tmp/optus_hub/frontend`
+- Playwright publicado em `https://10.222.222.33` com:
+  - `tests/e2e/auth.spec.ts`
+  - `tests/e2e/navigation.spec.ts`
+  - `tests/e2e/projects.spec.ts`
+  - `tests/e2e/companies-leads.spec.ts`
 
 ## Regra para continuidade por agentes
 

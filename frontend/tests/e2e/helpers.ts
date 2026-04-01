@@ -18,5 +18,6 @@ export async function login(page: Page) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Senha").fill(password);
   await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page.getByText("Módulo ativo")).toBeVisible();
+  await expect(page.locator(".topbar h2")).toBeVisible();
+  await expect(page.locator(".topbar-kicker")).toContainText("Optus Hub");
 }
