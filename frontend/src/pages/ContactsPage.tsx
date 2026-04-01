@@ -148,34 +148,19 @@ export function ContactsPage() {
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid single">
       <article className="card">
         <div className="section-heading">
           <span className="eyebrow">CRM</span>
           <h3>Contatos</h3>
           <p className="section-copy">
-            A lista fica em memória para filtrar rápido, sem disparar uma requisição a cada tecla digitada.
+            Indicadores compactos primeiro, cadastro logo abaixo e a tabela sempre no final.
           </p>
         </div>
 
         {error && <div className="inline-error">{error}</div>}
 
-        <div className="toolbar contacts-toolbar">
-          <input
-            placeholder="Buscar por nome, empresa, email, telefone ou cargo"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select value={activeOnly ? "active" : ""} onChange={(event) => setActiveOnly(event.target.value === "active")}>
-            <option value="">Todos</option>
-            <option value="active">Somente ativos</option>
-          </select>
-          <button className="primary-button" onClick={startCreate} type="button">
-            Novo contato
-          </button>
-        </div>
-
-        <div className="crm-summary-grid">
+        <div className="crm-summary-grid compact-summary-grid">
           <div className="metric-card">
             <span>Total</span>
             <strong>{stats.total}</strong>
@@ -196,6 +181,147 @@ export function ContactsPage() {
             <strong>{stats.withCompany}</strong>
             <small>vínculos comerciais</small>
           </div>
+        </div>
+      </article>
+
+      <article className="card">
+        <div className="stacked-card-sections">
+          <div>
+            <div className="section-heading">
+              <span className="eyebrow">Cadastro</span>
+              <h3>{selectedId === null ? "Novo contato" : "Editar contato"}</h3>
+              <p className="section-copy">
+                Cadastro compacto para criar e corrigir contato sem sair do fluxo.
+              </p>
+            </div>
+
+            <form className="form-card" onSubmit={handleSubmit}>
+              <label className="field">
+                <span>Empresa</span>
+                <select
+                  value={form.company_id}
+                  onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
+                >
+                  <option value="">Sem vínculo</option>
+                  {safeCompanies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.legal_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Nome</span>
+                <input
+                  value={form.full_name}
+                  onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Email</span>
+                <input
+                  value={form.email}
+                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Telefone</span>
+                <input
+                  value={form.phone}
+                  onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Cargo</span>
+                <input
+                  value={form.position}
+                  onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))}
+                />
+              </label>
+              <label className="check-field">
+                <input
+                  checked={form.is_active}
+                  onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
+                  type="checkbox"
+                />
+                <span>Contato ativo</span>
+              </label>
+              <div className="form-actions">
+                <button className="primary-button" type="submit">
+                  {selectedId === null ? "Criar contato" : "Atualizar contato"}
+                </button>
+                <button
+                  className="ghost-button"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setForm(EMPTY_FORM);
+                  }}
+                  type="button"
+                >
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="detail-panel detail-panel-standalone contacts-detail-panel">
+            <div className="section-heading">
+              <span className="eyebrow">Painel do contato</span>
+              <h3>{selectedContact?.full_name || "Nenhum contato selecionado"}</h3>
+              <p className="section-copy">
+                O painel mostra contexto humano do contato sem misturar a lista e o formulário.
+              </p>
+            </div>
+
+            {selectedContact ? (
+              <div className="detail-hero">
+                <div className="detail-badges">
+                  <span className={selectedContact.is_active ? "status-pill status-active" : "status-pill status-on_hold"}>
+                    {selectedContact.is_active ? "Ativo" : "Inativo"}
+                  </span>
+                  <span className="status-pill detail-source">{selectedContact.company_name || "Sem empresa"}</span>
+                </div>
+                <div className="detail-meta detail-meta-dense">
+                  <span>{selectedContact.email || "Sem email"}</span>
+                  <span>{selectedContact.phone || "Sem telefone"}</span>
+                  <span>{selectedContact.position || "Sem cargo"}</span>
+                  <span>{formatDateTime(selectedContact.created_at)}</span>
+                </div>
+                <p>
+                  {selectedContact.company_name
+                    ? `Contato vinculado à empresa ${selectedContact.company_name}.`
+                    : "Contato ainda sem vínculo com uma empresa."}
+                </p>
+              </div>
+            ) : (
+              <div className="empty-state-panel">
+                <strong>Selecione um contato</strong>
+                <p>Toque em uma linha da lista para abrir o contexto operacional desse registro.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </article>
+
+      <article className="card">
+        <div className="section-heading">
+          <span className="eyebrow">Tabela</span>
+          <h3>Base de contatos</h3>
+        </div>
+
+        <div className="toolbar contacts-toolbar">
+          <input
+            placeholder="Buscar por nome, empresa, email, telefone ou cargo"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <select value={activeOnly ? "active" : ""} onChange={(event) => setActiveOnly(event.target.value === "active")}>
+            <option value="">Todos</option>
+            <option value="active">Somente ativos</option>
+          </select>
+          <button className="primary-button" onClick={startCreate} type="button">
+            Novo contato
+          </button>
         </div>
 
         <div className="table-summary">
@@ -240,121 +366,6 @@ export function ContactsPage() {
             </table>
           </div>
         )}
-      </article>
-
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Cadastro</span>
-          <h3>{selectedId === null ? "Novo contato" : "Editar contato"}</h3>
-          <p className="section-copy">
-            O cadastro fica no topo para acelerar preenchimento e edição sem obrigar troca de contexto.
-          </p>
-        </div>
-
-        <form className="form-card" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Empresa</span>
-            <select
-              value={form.company_id}
-              onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
-            >
-              <option value="">Sem vínculo</option>
-              {safeCompanies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.legal_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Nome</span>
-            <input
-              value={form.full_name}
-              onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Email</span>
-            <input
-              value={form.email}
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Telefone</span>
-            <input
-              value={form.phone}
-              onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>Cargo</span>
-            <input
-              value={form.position}
-              onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))}
-            />
-          </label>
-          <label className="check-field">
-            <input
-              checked={form.is_active}
-              onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
-              type="checkbox"
-            />
-            <span>Contato ativo</span>
-          </label>
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
-              {selectedId === null ? "Criar contato" : "Atualizar contato"}
-            </button>
-            <button
-              className="ghost-button"
-              onClick={() => {
-                setSelectedId(null);
-                setForm(EMPTY_FORM);
-              }}
-              type="button"
-            >
-              Limpar
-            </button>
-          </div>
-        </form>
-
-        <div className="detail-panel detail-panel-standalone contacts-detail-panel">
-          <div className="section-heading">
-            <span className="eyebrow">Painel do contato</span>
-            <h3>{selectedContact?.full_name || "Nenhum contato selecionado"}</h3>
-            <p className="section-copy">
-              O painel mostra contexto humano do contato sem misturar a lista e o formulário.
-            </p>
-          </div>
-
-          {selectedContact ? (
-            <div className="detail-hero">
-              <div className="detail-badges">
-                <span className={selectedContact.is_active ? "status-pill status-active" : "status-pill status-on_hold"}>
-                  {selectedContact.is_active ? "Ativo" : "Inativo"}
-                </span>
-                <span className="status-pill detail-source">{selectedContact.company_name || "Sem empresa"}</span>
-              </div>
-              <div className="detail-meta detail-meta-dense">
-                <span>{selectedContact.email || "Sem email"}</span>
-                <span>{selectedContact.phone || "Sem telefone"}</span>
-                <span>{selectedContact.position || "Sem cargo"}</span>
-                <span>{formatDateTime(selectedContact.created_at)}</span>
-              </div>
-              <p>
-                {selectedContact.company_name
-                  ? `Contato vinculado à empresa ${selectedContact.company_name}.`
-                  : "Contato ainda sem vínculo com uma empresa."}
-              </p>
-            </div>
-          ) : (
-            <div className="empty-state-panel">
-              <strong>Selecione um contato</strong>
-              <p>Toque em uma linha da lista para abrir o contexto operacional desse registro.</p>
-            </div>
-          )}
-        </div>
       </article>
     </section>
   );

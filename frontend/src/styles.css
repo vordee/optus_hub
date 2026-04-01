@@ -583,9 +583,35 @@ tbody tr.selected-row {
   margin-bottom: 18px;
 }
 
+.compact-summary-grid {
+  margin-bottom: 0;
+}
+
+.compact-summary-grid .metric-card {
+  min-height: 0;
+  padding: 12px 14px;
+}
+
+.compact-summary-grid .metric-card strong {
+  margin-top: 4px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.compact-summary-grid .metric-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-soft);
+}
+
 .crm-summary-grid .metric-card,
 .crm-context-grid .metric-card {
   min-height: 104px;
+}
+
+.stacked-card-sections {
+  display: grid;
+  gap: 20px;
 }
 
 .detail-section {

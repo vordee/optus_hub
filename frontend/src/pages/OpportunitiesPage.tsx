@@ -38,7 +38,6 @@ export function OpportunitiesPage() {
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
-  const [opportunityView, setOpportunityView] = useState<"painel" | "cadastro">("painel");
   const [listView, setListView] = useState<"lista" | "pipeline">("pipeline");
   const [kickoffForm, setKickoffForm] = useState({
     project_name: "",
@@ -84,10 +83,10 @@ export function OpportunitiesPage() {
   }, [page, debouncedQuery, filterStatus]);
 
   useEffect(() => {
-    if (opportunityView === "cadastro" && !leadsLoaded && !leadsLoading) {
+    if (!leadsLoaded && !leadsLoading) {
       void loadLeads();
     }
-  }, [leadsLoaded, leadsLoading, opportunityView]);
+  }, [leadsLoaded, leadsLoading]);
 
   async function loadOpportunities() {
     try {
@@ -165,7 +164,6 @@ export function OpportunitiesPage() {
 
   function populate(item: OpportunityItem) {
     setSelectedId(item.id);
-    setOpportunityView("painel");
     setForm({
       lead_id: item.lead_id ? String(item.lead_id) : "",
       title: item.title,
@@ -216,7 +214,6 @@ export function OpportunitiesPage() {
       }
       setSelectedId(null);
       setSelectedDetail(null);
-      setOpportunityView("painel");
       setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
       await loadOpportunities();
     } catch (submitError) {
@@ -225,41 +222,17 @@ export function OpportunitiesPage() {
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid single">
       <article className="card">
         <div className="section-heading">
           <span className="eyebrow">CRM</span>
           <h3>Oportunidades</h3>
           <p className="section-copy">
-            Trabalhe a carteira comercial pela lista e use o painel ao lado para conduzir o negócio aberto.
+            Resumo compacto primeiro, cadastro logo abaixo e a visualização comercial no final.
           </p>
         </div>
         {error && <div className="inline-error">{error}</div>}
-        <div className="toolbar">
-          <input
-            placeholder="Buscar por título"
-            value={query}
-            onChange={(event) => {
-              setPage(1);
-              setQuery(event.target.value);
-            }}
-          />
-          <select
-            value={filterStatus}
-            onChange={(event) => {
-              setPage(1);
-              setFilterStatus(event.target.value);
-            }}
-          >
-            <option value="">Todos os status</option>
-            {OPPORTUNITY_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {formatOpportunityStatus(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="crm-summary-grid">
+        <div className="crm-summary-grid compact-summary-grid">
           <div className="metric-card">
             <span>Abertas</span>
             <strong>{statusStats.open}</strong>
@@ -281,143 +254,88 @@ export function OpportunitiesPage() {
             <small>somatório da página</small>
           </div>
         </div>
-        <div className="status-board">
-          {OPPORTUNITY_STATUSES.map((status) => (
-            <button
-              key={status}
-              className={filterStatus === status ? "status-board-card active" : "status-board-card"}
-              onClick={() => {
-                setPage(1);
-                setFilterStatus((current) => (current === status ? "" : status));
-              }}
-              type="button"
-            >
-              <span>{formatOpportunityStatus(status)}</span>
-              <strong>{statusStats[status]}</strong>
-              <small>
-                {status === "open" && "entrada e descoberta"}
-                {status === "proposal" && "propostas em negociação"}
-                {status === "won" && "negócios prontos para operação"}
-                {status === "lost" && "oportunidades encerradas"}
-              </small>
-            </button>
-          ))}
-        </div>
-        <div className="table-summary">
-          <span>{total} oportunidades encontradas</span>
-          <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
-          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-        </div>
-        <div className="panel-switcher">
-          <button
-            className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setListView("pipeline")}
-            type="button"
-          >
-            Pipeline
-          </button>
-          <button
-            className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setListView("lista")}
-            type="button"
-          >
-            Lista
-          </button>
-        </div>
-        {listView === "pipeline" ? (
-          <div className="pipeline-grid">
-            {pipelineItems.map((column) => (
-              <article key={column.status} className="pipeline-column">
-                <div className="pipeline-column-head">
-                  <div>
-                    <span className="eyebrow">Etapa</span>
-                    <h4>{formatOpportunityStatus(column.status)}</h4>
-                  </div>
-                  <span className="status-pill">{column.items.length}</span>
-                </div>
-                <div className="pipeline-stack">
-                  {column.items.map((item) => (
-                    <button
-                      key={item.id}
-                      className={selectedId === item.id ? "pipeline-card selected" : "pipeline-card"}
-                      onClick={() => populate(item)}
-                      type="button"
-                    >
-                      <strong>{item.title}</strong>
-                      <span>{item.company_name || "Sem empresa"}</span>
-                      <small>{item.contact_name || "Sem contato"}</small>
-                      <b>{formatCurrency(item.amount)}</b>
-                    </button>
-                  ))}
-                  {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Empresa</th>
-                  <th>Status</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={selectedId === item.id ? "selected-row" : ""}
-                    onClick={() => populate(item)}
-                  >
-                    <td>{item.title}</td>
-                    <td>{item.company_name || "-"}</td>
-                    <td>
-                      <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
-                    </td>
-                    <td>{formatCurrency(item.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="pager">
-          <span>{total} registros</span>
-          <div className="pager-actions">
-            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
-              Anterior
-            </button>
-            <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
-              Próxima
-            </button>
-          </div>
-        </div>
       </article>
 
       <article className="card">
-        <div className="panel-switcher">
-          <button
-            className={opportunityView === "painel" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setOpportunityView("painel")}
-            type="button"
-          >
-            Painel comercial
-          </button>
-          <button
-            className={opportunityView === "cadastro" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setOpportunityView("cadastro")}
-            type="button"
-          >
-            Cadastro e edição
-          </button>
-        </div>
+        <div className="stacked-card-sections">
+          <form className="form-card opportunity-form-shell" onSubmit={handleSubmit}>
+            <div className="section-heading">
+              <span className="eyebrow">Cadastro</span>
+              <h3>{selectedId === null ? "Nova oportunidade" : "Editar oportunidade"}</h3>
+              <p className="section-copy">
+                Cadastro compacto para criação rápida e correção cadastral.
+              </p>
+            </div>
+            {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
+            <label className="field">
+              <span>Lead</span>
+              <select
+                value={form.lead_id}
+                onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
+              >
+                <option value="">Sem lead</option>
+                {safeLeads.map((lead) => (
+                  <option key={lead.id} value={lead.id}>
+                    {lead.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Título</span>
+              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Descrição</span>
+              <textarea
+                value={form.description}
+                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              />
+            </label>
+            <div className="task-form-grid task-form-grid-2">
+              <label className="field">
+                <span>Status</span>
+                <select
+                  value={form.status}
+                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+                >
+                  {OPPORTUNITY_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {formatOpportunityStatus(status)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Valor</span>
+                <input
+                  value={form.amount}
+                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                  type="number"
+                />
+              </label>
+            </div>
+            <div className="form-actions">
+              <button className="primary-button" type="submit">
+                {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
+              </button>
+              {selectedId !== null && (
+                <button
+                  className="ghost-button"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedDetail(null);
+                    setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
+                  }}
+                  type="button"
+                >
+                  Limpar edição
+                </button>
+              )}
+            </div>
+          </form>
 
-        {opportunityView === "painel" ? (
-          selectedDetail ? (
+          {selectedDetail ? (
             <div className="detail-panel detail-panel-standalone">
               <div className="detail-hero">
                 <div className="detail-badges">
@@ -604,85 +522,154 @@ export function OpportunitiesPage() {
               <strong>Selecione uma oportunidade na lista</strong>
               <p>O painel comercial mostra histórico, próximas transições e ponte para kickoff sem misturar isso com o formulário.</p>
             </div>
-          )
-        ) : (
-          <form className="form-card opportunity-form-shell" onSubmit={handleSubmit}>
-            <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Nova oportunidade" : "Editar oportunidade"}</h3>
-              <p className="section-copy">
-                Use este formulário para criação rápida ou correção cadastral. A operação continua concentrada no painel comercial.
-              </p>
-            </div>
-            {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
-            <label className="field">
-              <span>Lead</span>
-              <select
-                value={form.lead_id}
-                onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
-              >
-                <option value="">Sem lead</option>
-                {safeLeads.map((lead) => (
-                  <option key={lead.id} value={lead.id}>
-                    {lead.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Título</span>
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Descrição</span>
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-              />
-            </label>
-            <div className="task-form-grid task-form-grid-2">
-              <label className="field">
-                <span>Status</span>
-                <select
-                  value={form.status}
-                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-                >
-                  {OPPORTUNITY_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {formatOpportunityStatus(status)}
-                    </option>
+          )}
+        </div>
+      </article>
+
+      <article className="card">
+        <div className="section-heading">
+          <span className="eyebrow">Tabela</span>
+          <h3>Carteira comercial</h3>
+        </div>
+        <div className="toolbar">
+          <input
+            placeholder="Buscar por título"
+            value={query}
+            onChange={(event) => {
+              setPage(1);
+              setQuery(event.target.value);
+            }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(event) => {
+              setPage(1);
+              setFilterStatus(event.target.value);
+            }}
+          >
+            <option value="">Todos os status</option>
+            {OPPORTUNITY_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {formatOpportunityStatus(status)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="status-board">
+          {OPPORTUNITY_STATUSES.map((status) => (
+            <button
+              key={status}
+              className={filterStatus === status ? "status-board-card active" : "status-board-card"}
+              onClick={() => {
+                setPage(1);
+                setFilterStatus((current) => (current === status ? "" : status));
+              }}
+              type="button"
+            >
+              <span>{formatOpportunityStatus(status)}</span>
+              <strong>{statusStats[status]}</strong>
+              <small>
+                {status === "open" && "entrada e descoberta"}
+                {status === "proposal" && "propostas em negociação"}
+                {status === "won" && "negócios prontos para operação"}
+                {status === "lost" && "oportunidades encerradas"}
+              </small>
+            </button>
+          ))}
+        </div>
+        <div className="table-summary">
+          <span>{total} oportunidades encontradas</span>
+          <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
+          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
+        </div>
+        <div className="panel-switcher">
+          <button
+            className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setListView("pipeline")}
+            type="button"
+          >
+            Pipeline
+          </button>
+          <button
+            className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
+            onClick={() => setListView("lista")}
+            type="button"
+          >
+            Lista
+          </button>
+        </div>
+        {listView === "pipeline" ? (
+          <div className="pipeline-grid">
+            {pipelineItems.map((column) => (
+              <article key={column.status} className="pipeline-column">
+                <div className="pipeline-column-head">
+                  <div>
+                    <span className="eyebrow">Etapa</span>
+                    <h4>{formatOpportunityStatus(column.status)}</h4>
+                  </div>
+                  <span className="status-pill">{column.items.length}</span>
+                </div>
+                <div className="pipeline-stack">
+                  {column.items.map((item) => (
+                    <button
+                      key={item.id}
+                      className={selectedId === item.id ? "pipeline-card selected" : "pipeline-card"}
+                      onClick={() => populate(item)}
+                      type="button"
+                    >
+                      <strong>{item.title}</strong>
+                      <span>{item.company_name || "Sem empresa"}</span>
+                      <small>{item.contact_name || "Sem contato"}</small>
+                      <b>{formatCurrency(item.amount)}</b>
+                    </button>
                   ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Valor</span>
-                <input
-                  value={form.amount}
-                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                  type="number"
-                />
-              </label>
-            </div>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
-              </button>
-              {selectedId !== null && (
-                <button
-                  className="ghost-button"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedDetail(null);
-                    setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
-                  }}
-                  type="button"
-                >
-                  Limpar edição
-                </button>
-              )}
-            </div>
-          </form>
+                  {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Empresa</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={selectedId === item.id ? "selected-row" : ""}
+                    onClick={() => populate(item)}
+                  >
+                    <td>{item.title}</td>
+                    <td>{item.company_name || "-"}</td>
+                    <td>
+                      <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
+                    </td>
+                    <td>{formatCurrency(item.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+        <div className="pager">
+          <span>{total} registros</span>
+          <div className="pager-actions">
+            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
+              Anterior
+            </button>
+            <span>Página {page}</span>
+            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
+              Próxima
+            </button>
+          </div>
+        </div>
       </article>
     </section>
   );

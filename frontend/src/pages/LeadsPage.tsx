@@ -21,7 +21,6 @@ export function LeadsPage() {
   const [total, setTotal] = useState(0);
   const [contactsLoaded, setContactsLoaded] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(false);
-  const [leadView, setLeadView] = useState<"painel" | "cadastro">("cadastro");
   const [form, setForm] = useState({
     contact_id: "",
     title: "",
@@ -51,10 +50,10 @@ export function LeadsPage() {
   }, [page, debouncedQuery, filterStatus]);
 
   useEffect(() => {
-    if (leadView === "cadastro" && !contactsLoaded && !contactsLoading) {
+    if (!contactsLoaded && !contactsLoading) {
       void loadContacts();
     }
-  }, [contactsLoaded, contactsLoading, leadView]);
+  }, [contactsLoaded, contactsLoading]);
 
   async function loadLeads() {
     try {
@@ -84,7 +83,6 @@ export function LeadsPage() {
 
   function populate(item: LeadItem) {
     setSelectedId(item.id);
-    setLeadView("cadastro");
     setForm({
       contact_id: item.contact_id ? String(item.contact_id) : "",
       title: item.title,
@@ -129,7 +127,6 @@ export function LeadsPage() {
       }
       setSelectedId(null);
       setSelectedDetail(null);
-      setLeadView("painel");
       setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
       await loadLeads();
     } catch (submitError) {
@@ -138,41 +135,17 @@ export function LeadsPage() {
   }
 
   return (
-    <section className="page-grid">
+    <section className="page-grid single">
       <article className="card">
         <div className="section-heading">
           <span className="eyebrow">CRM</span>
           <h3>Leads</h3>
           <p className="section-copy">
-            Trabalhe o lead pela lista e mantenha o contexto do registro aberto no painel, não no formulário.
+            Resumo rápido no topo, cadastro logo em seguida e a tabela no final da página.
           </p>
         </div>
         {error && <div className="inline-error">{error}</div>}
-        <div className="toolbar">
-          <input
-            placeholder="Buscar por título ou origem"
-            value={query}
-            onChange={(event) => {
-              setPage(1);
-              setQuery(event.target.value);
-            }}
-          />
-          <select
-            value={filterStatus}
-            onChange={(event) => {
-              setPage(1);
-              setFilterStatus(event.target.value);
-            }}
-          >
-            <option value="">Todos os status</option>
-            {LEAD_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {formatLeadStatus(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="crm-summary-grid">
+        <div className="crm-summary-grid compact-summary-grid">
           <div className="metric-card">
             <span>Novos</span>
             <strong>{statusStats.new}</strong>
@@ -194,54 +167,10 @@ export function LeadsPage() {
             <small>conversão no recorte atual</small>
           </div>
         </div>
-        <div className="table-summary">
-          <span>{total} leads encontrados</span>
-          <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
-          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Empresa</th>
-                <th>Contato</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
-                  <td>{item.title}</td>
-                  <td>{item.company_name || "-"}</td>
-                  <td>{item.contact_name || "-"}</td>
-                  <td><span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="pager">
-          <span>{total} registros</span>
-          <div className="pager-actions">
-            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
-            <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
-          </div>
-        </div>
       </article>
 
       <article className="card">
-        <div className="panel-switcher">
-          <button className={leadView === "cadastro" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("cadastro")} type="button">
-            Cadastro
-          </button>
-          <button className={leadView === "painel" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setLeadView("painel")} type="button">
-            Painel do lead
-          </button>
-        </div>
-
-        {leadView === "cadastro" ? (
+        <div className="stacked-card-sections">
           <form className="form-card" onSubmit={handleSubmit}>
             <div className="section-heading">
               <span className="eyebrow">Cadastro</span>
@@ -287,8 +216,7 @@ export function LeadsPage() {
               </button>
             </div>
           </form>
-        ) : (
-          selectedDetail ? (
+          {selectedDetail ? (
             <div className="detail-panel detail-panel-standalone">
               <div className="detail-hero">
                 <div className="detail-badges">
@@ -296,7 +224,7 @@ export function LeadsPage() {
                   <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
                 </div>
                 <div className="section-heading">
-                  <span className="eyebrow">Registro em foco</span>
+                  <span className="eyebrow">Painel do lead</span>
                   <h3>{selectedDetail.title}</h3>
                 </div>
                 <div className="detail-meta detail-meta-dense">
@@ -369,8 +297,74 @@ export function LeadsPage() {
               <strong>Selecione um lead na lista</strong>
               <p>O painel do lead concentra contexto, leitura da etapa e histórico sem cair direto em edição.</p>
             </div>
-          )
-        )}
+          )}
+        </div>
+      </article>
+
+      <article className="card">
+        <div className="section-heading">
+          <span className="eyebrow">Tabela</span>
+          <h3>Base de leads</h3>
+        </div>
+        <div className="toolbar">
+          <input
+            placeholder="Buscar por título ou origem"
+            value={query}
+            onChange={(event) => {
+              setPage(1);
+              setQuery(event.target.value);
+            }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(event) => {
+              setPage(1);
+              setFilterStatus(event.target.value);
+            }}
+          >
+            <option value="">Todos os status</option>
+            {LEAD_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {formatLeadStatus(status)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="table-summary">
+          <span>{total} leads encontrados</span>
+          <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
+          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Empresa</th>
+                <th>Contato</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
+                  <td>{item.title}</td>
+                  <td>{item.company_name || "-"}</td>
+                  <td>{item.contact_name || "-"}</td>
+                  <td><span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="pager">
+          <span>{total} registros</span>
+          <div className="pager-actions">
+            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
+            <span>Página {page}</span>
+            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+          </div>
+        </div>
       </article>
     </section>
   );
