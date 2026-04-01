@@ -614,6 +614,44 @@ tbody tr[role="button"]:focus-visible td {
   margin-bottom: 10px;
 }
 
+.view-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 0.9fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.view-control {
+  display: grid;
+  gap: 6px;
+}
+
+.view-control span {
+  color: var(--text-soft);
+}
+
+.view-control select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 10px 12px;
+  color: inherit;
+}
+
+.view-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .contacts-toolbar {
   flex-wrap: wrap;
 }
@@ -939,6 +977,33 @@ tbody tr[role="button"]:focus-visible td {
 
 .panel-switcher-wrap {
   flex-wrap: wrap;
+}
+
+.grouped-records {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.grouped-records-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.grouped-records-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.grouped-records-head h4 {
+  margin: 4px 0 0;
+  font-family: "Lexend", "Source Sans 3", system-ui, sans-serif;
 }
 
 .record-action-bar,
@@ -1644,6 +1709,18 @@ tbody tr[role="button"]:focus-visible td {
     grid-template-columns: 1fr 1fr;
   }
 
+  .view-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .view-actions {
+    justify-content: flex-start;
+  }
+
+  .view-actions .ghost-button {
+    width: 100%;
+  }
+
   .crm-summary-grid,
   .crm-context-grid,
   .activity-summary-grid,
@@ -1717,6 +1794,10 @@ tbody tr[role="button"]:focus-visible td {
   .workspace-stat-strip {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .view-controls {
+    gap: 8px;
   }
 
   .crm-summary-grid,

@@ -118,6 +118,8 @@ export interface LeadItem {
 export type CRMActivityEntityType = "lead" | "opportunity";
 export type CRMActivityType = "call" | "email" | "meeting" | "task" | "follow_up";
 export type CRMActivityStatus = "pending" | "done" | "canceled";
+export type CRMViewModule = "leads" | "opportunities";
+export type CRMViewGroupBy = "none" | "status" | "source" | "company" | "lead";
 
 export interface CRMActivityItem {
   id: number;
@@ -134,6 +136,36 @@ export interface CRMActivityItem {
   completed_at: string | null;
   created_at: string;
   created_by_email: string | null;
+}
+
+export interface CRMViewFilters {
+  query: string;
+  status: string;
+  group_by: CRMViewGroupBy;
+  list_view?: "lista" | "pipeline";
+}
+
+export interface SavedViewItem {
+  id: number;
+  module: CRMViewModule;
+  name: string;
+  filters_json: CRMViewFilters;
+  group_by: CRMViewGroupBy;
+  sort_by: string | null;
+  sort_direction: "asc" | "desc";
+  is_default: boolean;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface SavedViewPayload {
+  name: string;
+  module: CRMViewModule;
+  filters_json: CRMViewFilters;
+  group_by: CRMViewGroupBy;
+  sort_by: string | null;
+  sort_direction: "asc" | "desc";
+  is_default: boolean;
 }
 
 export interface LeadListResponse {

@@ -7,20 +7,104 @@ import { ActivityPanel } from "../app/ActivityPanel";
 import { formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
+import { buildSavedViewPayload, formatCRMViewGroupByLabel, normalizeCRMViewFilters } from "../app/savedViews";
+import { createSavedView, loadSavedViews, updateSavedView } from "../app/savedViewsApi";
 import { QuickFormModal } from "../app/QuickFormModal";
-import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
+import type {
+  CRMViewFilters,
+  CRMViewGroupBy,
+  ContactItem,
+  LeadDetailItem,
+  LeadItem,
+  LeadListResponse,
+  SavedViewItem,
+} from "../app/types";
 
 const PAGE_SIZE = 8;
+const LEAD_GROUP_OPTIONS: Array<{ value: CRMViewGroupBy; label: string }> = [
+  { value: "none", label: "Sem agrupamento" },
+  { value: "status", label: "Por status" },
+  { value: "source", label: "Por origem" },
+  { value: "company", label: "Por empresa" },
+];
+
+type LeadGroup = {
+  key: string;
+  label: string;
+  items: LeadItem[];
+};
+
+function getLeadGroupLabel(item: LeadItem, groupBy: CRMViewGroupBy) {
+  if (groupBy === "status") {
+    return formatLeadStatus(item.status);
+  }
+  if (groupBy === "source") {
+    return item.source || "Origem não informada";
+  }
+  if (groupBy === "company") {
+    return item.company_name || "Sem empresa";
+  }
+  return "Leads";
+}
+
+function buildLeadGroups(items: LeadItem[], groupBy: CRMViewGroupBy): LeadGroup[] {
+  if (groupBy === "none") {
+    return [{ key: "all", label: "Leads", items }];
+  }
+
+  if (groupBy === "status") {
+    return LEAD_STATUSES.map((status) => ({
+      key: status,
+      label: formatLeadStatus(status),
+      items: items.filter((item) => item.status === status),
+    }));
+  }
+
+  const buckets = new Map<string, LeadItem[]>();
+  for (const item of items) {
+    const key = getLeadGroupLabel(item, groupBy);
+    buckets.set(key, [...(buckets.get(key) || []), item]);
+  }
+
+  return [...buckets.entries()]
+    .map(([key, groupedItems]) => ({
+      key,
+      label: key,
+      items: groupedItems,
+    }))
+    .sort((left, right) => right.items.length - left.items.length || left.label.localeCompare(right.label, "pt-BR"));
+}
+
+function getLeadViewName(filters: CRMViewFilters) {
+  if (filters.status && filters.group_by !== "none") {
+    return `Leads ${formatLeadStatus(filters.status)} por ${formatCRMViewGroupByLabel(filters.group_by)}`;
+  }
+  if (filters.status) {
+    return `Leads ${formatLeadStatus(filters.status)}`;
+  }
+  if (filters.group_by !== "none") {
+    return `Leads por ${formatCRMViewGroupByLabel(filters.group_by)}`;
+  }
+  return "Visão de leads";
+}
 
 export function LeadsPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedViewItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<LeadDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedViewError, setSavedViewError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [groupBy, setGroupBy] = useState<CRMViewGroupBy>("none");
+  const [activeSavedViewId, setActiveSavedViewId] = useState<number | null>(null);
+  const [savedViewName, setSavedViewName] = useState("");
+  const [savedViewDefault, setSavedViewDefault] = useState(false);
+  const [savedViewSubmitting, setSavedViewSubmitting] = useState(false);
+  const [savedViewDialogOpen, setSavedViewDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [contactsLoaded, setContactsLoaded] = useState(false);
@@ -42,6 +126,17 @@ export function LeadsPage() {
     }),
     [items],
   );
+  const groupedItems = useMemo(() => buildLeadGroups(items, groupBy), [groupBy, items]);
+  const currentFilters = useMemo<CRMViewFilters>(
+    () => ({
+      query,
+      status: filterStatus,
+      group_by: groupBy,
+      list_view: "lista",
+    }),
+    [filterStatus, groupBy, query],
+  );
+  const activeSavedView = savedViews.find((view) => view.id === activeSavedViewId) || null;
   const safeContacts = ensureArray(contacts);
   const safeHistory = ensureArray(selectedDetail?.history);
 
@@ -59,6 +154,10 @@ export function LeadsPage() {
       void loadContacts();
     }
   }, [contactsLoaded, contactsLoading]);
+
+  useEffect(() => {
+    void loadLeadViews();
+  }, []);
 
   async function loadLeads() {
     try {
@@ -86,6 +185,23 @@ export function LeadsPage() {
     }
   }
 
+  async function loadLeadViews() {
+    try {
+      setSavedViewError(null);
+      const views = await loadSavedViews("leads");
+      setSavedViews(views);
+      if (activeSavedViewId !== null && !views.some((view) => view.id === activeSavedViewId)) {
+        setActiveSavedViewId(null);
+      }
+    } catch (loadError) {
+      if (loadError instanceof ApiError && loadError.status === 404) {
+        setSavedViews([]);
+        return;
+      }
+      setSavedViewError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar visões salvas.");
+    }
+  }
+
   function populate(item: LeadItem) {
     setSelectedId(item.id);
     void loadDetail(item.id);
@@ -107,6 +223,66 @@ export function LeadsPage() {
       setSelectedDetail(await apiRequest<LeadDetailItem>(`/v1/crm/leads/${leadId}`));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do lead.");
+    }
+  }
+
+  function applySavedView(view: SavedViewItem) {
+    const filters = normalizeCRMViewFilters(view.filters_json, "lista");
+    setActiveSavedViewId(view.id);
+    setQuery(filters.query);
+    setDebouncedQuery(filters.query);
+    setFilterStatus(filters.status);
+    setGroupBy(filters.group_by);
+    setPage(1);
+    setSavedViewDefault(view.is_default);
+  }
+
+  function openSaveViewDialog() {
+    const source = activeSavedView ? normalizeCRMViewFilters(activeSavedView.filters_json, "lista") : currentFilters;
+    setSavedViewName(activeSavedView?.name || getLeadViewName(source));
+    setSavedViewDefault(activeSavedView?.is_default || false);
+    setSavedViewDialogOpen(true);
+  }
+
+  function resetViewSelection() {
+    setActiveSavedViewId(null);
+    setSavedViewName("");
+    setSavedViewDefault(false);
+  }
+
+  async function refreshViews() {
+    await loadLeadViews();
+  }
+
+  async function handleSaveView(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!savedViewName.trim()) {
+      setSavedViewError("Informe um nome para a visão.");
+      return;
+    }
+
+    setSavedViewSubmitting(true);
+    try {
+      const payload = buildSavedViewPayload({
+        name: savedViewName.trim(),
+        module: "leads",
+        query,
+        status: filterStatus,
+        groupBy,
+        listView: "lista",
+        isDefault: savedViewDefault,
+      });
+
+      const savedView = activeSavedViewId
+        ? await updateSavedView(activeSavedViewId, payload)
+        : await createSavedView(payload);
+      setActiveSavedViewId(savedView.id);
+      setSavedViewDialogOpen(false);
+      await refreshViews();
+    } catch (saveError) {
+      setSavedViewError(saveError instanceof ApiError ? saveError.message : "Falha ao salvar visão.");
+    } finally {
+      setSavedViewSubmitting(false);
     }
   }
 
@@ -226,12 +402,14 @@ export function LeadsPage() {
             </div>
           </div>
           {error && <div className="inline-error">{error}</div>}
+          {savedViewError && <div className="inline-note">{savedViewError}</div>}
           <div className="toolbar">
             <input
               placeholder="Buscar por título ou origem"
               value={query}
               onChange={(event) => {
                 setPage(1);
+                resetViewSelection();
                 setQuery(event.target.value);
               }}
             />
@@ -239,6 +417,7 @@ export function LeadsPage() {
               value={filterStatus}
               onChange={(event) => {
                 setPage(1);
+                resetViewSelection();
                 setFilterStatus(event.target.value);
               }}
             >
@@ -250,46 +429,112 @@ export function LeadsPage() {
               ))}
             </select>
           </div>
+          <div className="view-controls">
+            <label className="view-control">
+              <span>Visão salva</span>
+              <select
+                value={activeSavedViewId ?? ""}
+                onChange={(event) => {
+                  const nextId = event.target.value ? Number(event.target.value) : null;
+                  const nextView = savedViews.find((view) => view.id === nextId) || null;
+                  if (nextView) {
+                    applySavedView(nextView);
+                    return;
+                  }
+                  resetViewSelection();
+                }}
+              >
+                <option value="">Visão atual</option>
+                {savedViews.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                    {view.is_default ? " (padrão)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="view-control">
+              <span>Agrupar por</span>
+              <select
+                value={groupBy}
+                onChange={(event) => {
+                  setPage(1);
+                  resetViewSelection();
+                  setGroupBy(event.target.value as CRMViewGroupBy);
+                }}
+              >
+                {LEAD_GROUP_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="view-actions">
+              <button className="ghost-button button-with-icon" onClick={openSaveViewDialog} type="button">
+                <AppIcon name="spark" />
+                <span>{activeSavedView ? "Atualizar visão" : "Salvar visão"}</span>
+              </button>
+              <button className="ghost-button button-with-icon" onClick={resetViewSelection} type="button">
+                <AppIcon name="close" />
+                <span>Limpar visão</span>
+              </button>
+            </div>
+          </div>
           <div className="table-summary">
             <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
             <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
+            <span>{groupBy === "none" ? "Lista simples" : `Agrupado por ${formatCRMViewGroupByLabel(groupBy)}`}</span>
             <span>{selectedId !== null ? `Lead ativo #${selectedId}` : "Nenhum lead ativo"}</span>
           </div>
-          <div className="record-list">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                aria-pressed={selectedId === item.id}
-                className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
-                onClick={() => populate(item)}
-                type="button"
-              >
-                <div className="record-list-item-main">
-                  <div className="record-list-item-head">
-                    <strong>{item.title}</strong>
-                    <span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span>
+          {groupedItems.map((group) => (
+            <section key={group.key} className="grouped-records">
+              {groupedItems.length > 1 && (
+                <div className="grouped-records-head">
+                  <div>
+                    <span className="eyebrow">Agrupamento</span>
+                    <h4>{group.label}</h4>
                   </div>
-                  <div className="record-list-item-meta">
-                    <span>{item.company_name || "Sem empresa"}</span>
-                    <span>{item.contact_name || "Sem contato"}</span>
-                    <span>{item.source || "Origem não informada"}</span>
-                    {item.next_activity && <span>{item.next_activity.title}</span>}
-                    {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
+                  <span className="status-pill">{group.items.length}</span>
+                </div>
+              )}
+              <div className="record-list">
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    aria-pressed={selectedId === item.id}
+                    className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
+                    onClick={() => populate(item)}
+                    type="button"
+                  >
+                    <div className="record-list-item-main">
+                      <div className="record-list-item-head">
+                        <strong>{item.title}</strong>
+                        <span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span>
+                      </div>
+                      <div className="record-list-item-meta">
+                        <span>{item.company_name || "Sem empresa"}</span>
+                        <span>{item.contact_name || "Sem contato"}</span>
+                        <span>{item.source || "Origem não informada"}</span>
+                        {item.next_activity && <span>{item.next_activity.title}</span>}
+                        {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
+                      </div>
+                    </div>
+                    <div className="record-list-item-side">
+                      <small>Criado em</small>
+                      <span>{formatDateTime(item.created_at)}</span>
+                    </div>
+                  </button>
+                ))}
+                {group.items.length === 0 && (
+                  <div className="record-list-empty">
+                    <strong>Nenhum lead encontrado</strong>
+                    <p>Ajuste a busca ou o status para abrir outro recorte comercial.</p>
                   </div>
-                </div>
-                <div className="record-list-item-side">
-                  <small>Criado em</small>
-                  <span>{formatDateTime(item.created_at)}</span>
-                </div>
-              </button>
-            ))}
-            {items.length === 0 && (
-              <div className="record-list-empty">
-                <strong>Nenhum lead encontrado</strong>
-                <p>Ajuste a busca ou o status para abrir outro recorte comercial.</p>
+                )}
               </div>
-            )}
-          </div>
+            </section>
+          ))}
           <div className="pager">
             <span>{total} registros</span>
             <div className="pager-actions">
@@ -468,6 +713,40 @@ export function LeadsPage() {
             </button>
             <button className="ghost-button" onClick={closeModal} type="button">
               Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
+      <QuickFormModal
+        description="Salve o recorte atual para recuperar filtros e agrupamento com um clique."
+        onClose={() => setSavedViewDialogOpen(false)}
+        open={savedViewDialogOpen}
+        title={activeSavedView ? "Atualizar visão" : "Salvar visão"}
+      >
+        <form className="form-card" onSubmit={handleSaveView}>
+          <label className="field">
+            <span>Nome da visão</span>
+            <input value={savedViewName} onChange={(event) => setSavedViewName(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Visão padrão</span>
+            <select value={savedViewDefault ? "yes" : "no"} onChange={(event) => setSavedViewDefault(event.target.value === "yes")}>
+              <option value="no">Não</option>
+              <option value="yes">Sim</option>
+            </select>
+          </label>
+          <div className="form-actions">
+            <button className="primary-button button-with-icon" disabled={savedViewSubmitting} type="submit">
+              <AppIcon name="check" />
+              <span>{savedViewSubmitting ? "Salvando..." : "Salvar visão"}</span>
+            </button>
+            <button
+              className="ghost-button button-with-icon"
+              onClick={() => setSavedViewDialogOpen(false)}
+              type="button"
+            >
+              <AppIcon name="close" />
+              <span>Cancelar</span>
             </button>
           </div>
         </form>

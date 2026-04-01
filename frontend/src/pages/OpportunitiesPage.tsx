@@ -7,10 +7,32 @@ import { ActivityPanel } from "../app/ActivityPanel";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
+import { buildSavedViewPayload, formatCRMViewGroupByLabel, normalizeCRMViewFilters } from "../app/savedViews";
+import { createSavedView, loadSavedViews, updateSavedView } from "../app/savedViewsApi";
 import { QuickFormModal } from "../app/QuickFormModal";
-import type { LeadItem, LeadListResponse, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
+import type {
+  CRMViewGroupBy,
+  LeadItem,
+  LeadListResponse,
+  OpportunityDetailItem,
+  OpportunityItem,
+  OpportunityListResponse,
+  SavedViewItem,
+} from "../app/types";
 
 const PAGE_SIZE = 8;
+const OPPORTUNITY_GROUP_OPTIONS: Array<{ value: CRMViewGroupBy; label: string }> = [
+  { value: "none", label: "Sem agrupamento" },
+  { value: "status", label: "Por status" },
+  { value: "company", label: "Por empresa" },
+  { value: "lead", label: "Por lead" },
+];
+
+type OpportunityGroup = {
+  key: string;
+  label: string;
+  items: OpportunityItem[];
+};
 
 function formatDateOnly(value: string | null) {
   if (!value) {
@@ -27,15 +49,71 @@ function formatDateOnly(value: string | null) {
   }).format(parsed);
 }
 
+function getOpportunityGroupLabel(item: OpportunityItem, groupBy: CRMViewGroupBy) {
+  if (groupBy === "status") {
+    return formatOpportunityStatus(item.status);
+  }
+  if (groupBy === "company") {
+    return item.company_name || "Sem empresa";
+  }
+  if (groupBy === "lead") {
+    return item.lead_id ? `Lead #${item.lead_id}` : "Sem lead";
+  }
+  return "Oportunidades";
+}
+
+function buildOpportunityGroups(items: OpportunityItem[], groupBy: CRMViewGroupBy): OpportunityGroup[] {
+  if (groupBy === "none") {
+    return [{ key: "all", label: "Oportunidades", items }];
+  }
+  if (groupBy === "status") {
+    return OPPORTUNITY_STATUSES.map((status) => ({
+      key: status,
+      label: formatOpportunityStatus(status),
+      items: items.filter((item) => item.status === status),
+    }));
+  }
+
+  const buckets = new Map<string, OpportunityItem[]>();
+  for (const item of items) {
+    const key = getOpportunityGroupLabel(item, groupBy);
+    buckets.set(key, [...(buckets.get(key) || []), item]);
+  }
+
+  return [...buckets.entries()]
+    .map(([key, groupedItems]) => ({
+      key,
+      label: key,
+      items: groupedItems,
+    }))
+    .sort((left, right) => right.items.length - left.items.length || left.label.localeCompare(right.label, "pt-BR"));
+}
+
+function getOpportunityViewName(filters: { status: string; group_by: CRMViewGroupBy }) {
+  if (filters.status && filters.group_by !== "none") {
+    return `Oportunidades ${formatOpportunityStatus(filters.status)} por ${formatCRMViewGroupByLabel(filters.group_by)}`;
+  }
+  if (filters.status) {
+    return `Oportunidades ${formatOpportunityStatus(filters.status)}`;
+  }
+  if (filters.group_by !== "none") {
+    return `Oportunidades por ${formatCRMViewGroupByLabel(filters.group_by)}`;
+  }
+  return "Visão de oportunidades";
+}
+
 export function OpportunitiesPage() {
   const [items, setItems] = useState<OpportunityItem[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedViewItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<OpportunityDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedViewError, setSavedViewError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [groupBy, setGroupBy] = useState<CRMViewGroupBy>("status");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [leadsLoaded, setLeadsLoaded] = useState(false);
@@ -43,6 +121,11 @@ export function OpportunitiesPage() {
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [listView, setListView] = useState<"lista" | "pipeline">("pipeline");
+  const [activeSavedViewId, setActiveSavedViewId] = useState<number | null>(null);
+  const [savedViewName, setSavedViewName] = useState("");
+  const [savedViewDefault, setSavedViewDefault] = useState(false);
+  const [savedViewSubmitting, setSavedViewSubmitting] = useState(false);
+  const [savedViewDialogOpen, setSavedViewDialogOpen] = useState(false);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [kickoffForm, setKickoffForm] = useState({
@@ -69,6 +152,9 @@ export function OpportunitiesPage() {
     [items],
   );
   const selectedListItem = items.find((item) => item.id === selectedId) || null;
+  const groupedItems = useMemo(() => buildOpportunityGroups(items, groupBy), [groupBy, items]);
+  const shouldShowPipeline = groupBy === "status" || (groupBy === "none" && listView === "pipeline");
+  const activeSavedView = savedViews.find((view) => view.id === activeSavedViewId) || null;
   const safeLeads = ensureArray(leads);
   const safeNextStatuses = ensureArray(selectedDetail?.next_statuses);
   const safeHistory = ensureArray(selectedDetail?.history);
@@ -94,6 +180,10 @@ export function OpportunitiesPage() {
       void loadLeads();
     }
   }, [leadsLoaded, leadsLoading]);
+
+  useEffect(() => {
+    void loadOpportunityViews();
+  }, []);
 
   useEffect(() => {
     const draft = consumeOpportunityDraft();
@@ -138,6 +228,23 @@ export function OpportunitiesPage() {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads de apoio.");
     } finally {
       setLeadsLoading(false);
+    }
+  }
+
+  async function loadOpportunityViews() {
+    try {
+      setSavedViewError(null);
+      const views = await loadSavedViews("opportunities");
+      setSavedViews(views);
+      if (activeSavedViewId !== null && !views.some((view) => view.id === activeSavedViewId)) {
+        setActiveSavedViewId(null);
+      }
+    } catch (loadError) {
+      if (loadError instanceof ApiError && loadError.status === 404) {
+        setSavedViews([]);
+        return;
+      }
+      setSavedViewError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar visões salvas.");
     }
   }
 
@@ -223,6 +330,72 @@ export function OpportunitiesPage() {
       setSelectedDetail(await apiRequest<OpportunityDetailItem>(`/v1/crm/opportunities/${opportunityId}`));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe da oportunidade.");
+    }
+  }
+
+  function applySavedView(view: SavedViewItem) {
+    const filters = normalizeCRMViewFilters(view.filters_json, "pipeline");
+    setActiveSavedViewId(view.id);
+    setQuery(filters.query);
+    setDebouncedQuery(filters.query);
+    setFilterStatus(filters.status);
+    setGroupBy(filters.group_by);
+    setListView(filters.list_view || "pipeline");
+    setPage(1);
+    setSavedViewDefault(view.is_default);
+  }
+
+  function openSaveViewDialog() {
+    const source = activeSavedView ? normalizeCRMViewFilters(activeSavedView.filters_json, "pipeline") : {
+      query,
+      status: filterStatus,
+      group_by: groupBy,
+      list_view: listView,
+    };
+    setSavedViewName(activeSavedView?.name || getOpportunityViewName(source));
+    setSavedViewDefault(activeSavedView?.is_default || false);
+    setSavedViewDialogOpen(true);
+  }
+
+  function resetViewSelection() {
+    setActiveSavedViewId(null);
+    setSavedViewName("");
+    setSavedViewDefault(false);
+  }
+
+  async function refreshViews() {
+    await loadOpportunityViews();
+  }
+
+  async function handleSaveView(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!savedViewName.trim()) {
+      setSavedViewError("Informe um nome para a visão.");
+      return;
+    }
+
+    setSavedViewSubmitting(true);
+    try {
+      const payload = buildSavedViewPayload({
+        name: savedViewName.trim(),
+        module: "opportunities",
+        query,
+        status: filterStatus,
+        groupBy,
+        listView,
+        isDefault: savedViewDefault,
+      });
+
+      const savedView = activeSavedViewId
+        ? await updateSavedView(activeSavedViewId, payload)
+        : await createSavedView(payload);
+      setActiveSavedViewId(savedView.id);
+      setSavedViewDialogOpen(false);
+      await refreshViews();
+    } catch (saveError) {
+      setSavedViewError(saveError instanceof ApiError ? saveError.message : "Falha ao salvar visão.");
+    } finally {
+      setSavedViewSubmitting(false);
     }
   }
 
@@ -336,35 +509,17 @@ export function OpportunitiesPage() {
                   <span>Limpar foco</span>
                 </button>
               )}
-              <div className="table-summary">
-                <span>{total} oportunidades</span>
-                <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
-              </div>
-              <div className="panel-switcher panel-switcher-compact">
-                <button
-                  className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
-                  onClick={() => setListView("pipeline")}
-                  type="button"
-                >
-                  Pipeline
-                </button>
-                <button
-                  className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
-                  onClick={() => setListView("lista")}
-                  type="button"
-                >
-                  Lista
-                </button>
-              </div>
             </div>
           </div>
           {error && <div className="inline-error">{error}</div>}
+          {savedViewError && <div className="inline-note">{savedViewError}</div>}
           <div className="toolbar">
             <input
               placeholder="Buscar por título"
               value={query}
               onChange={(event) => {
                 setPage(1);
+                resetViewSelection();
                 setQuery(event.target.value);
               }}
             />
@@ -372,6 +527,7 @@ export function OpportunitiesPage() {
               value={filterStatus}
               onChange={(event) => {
                 setPage(1);
+                resetViewSelection();
                 setFilterStatus(event.target.value);
               }}
             >
@@ -383,6 +539,95 @@ export function OpportunitiesPage() {
               ))}
             </select>
           </div>
+          <div className="view-controls">
+            <label className="view-control">
+              <span>Visão salva</span>
+              <select
+                value={activeSavedViewId ?? ""}
+                onChange={(event) => {
+                  const nextId = event.target.value ? Number(event.target.value) : null;
+                  const nextView = savedViews.find((view) => view.id === nextId) || null;
+                  if (nextView) {
+                    applySavedView(nextView);
+                    return;
+                  }
+                  resetViewSelection();
+                }}
+              >
+                <option value="">Visão atual</option>
+                {savedViews.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                    {view.is_default ? " (padrão)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="view-control">
+              <span>Agrupar por</span>
+              <select
+                value={groupBy}
+                onChange={(event) => {
+                  setPage(1);
+                  resetViewSelection();
+                  const nextGroup = event.target.value as CRMViewGroupBy;
+                  setGroupBy(nextGroup);
+                  if (nextGroup === "status") {
+                    setListView("pipeline");
+                  }
+                }}
+              >
+                {OPPORTUNITY_GROUP_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="view-actions">
+              <button className="ghost-button button-with-icon" onClick={openSaveViewDialog} type="button">
+                <AppIcon name="spark" />
+                <span>{activeSavedView ? "Atualizar visão" : "Salvar visão"}</span>
+              </button>
+              <button className="ghost-button button-with-icon" onClick={resetViewSelection} type="button">
+                <AppIcon name="close" />
+                <span>Limpar visão</span>
+              </button>
+            </div>
+          </div>
+          {groupBy === "none" && (
+            <div className="panel-switcher panel-switcher-compact panel-switcher-wrap">
+              <button
+                className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
+                onClick={() => {
+                  setPage(1);
+                  resetViewSelection();
+                  setListView("pipeline");
+                }}
+                type="button"
+              >
+                Pipeline
+              </button>
+              <button
+                className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
+                onClick={() => {
+                  setPage(1);
+                  resetViewSelection();
+                  setListView("lista");
+                }}
+                type="button"
+              >
+                Lista
+              </button>
+            </div>
+          )}
+          <div className="table-summary">
+            <span>{total} oportunidades</span>
+            <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
+            <span>
+              {groupBy === "none" ? (listView === "pipeline" ? "Pipeline" : "Lista") : `Agrupado por ${formatCRMViewGroupByLabel(groupBy)}`}
+            </span>
+          </div>
           <div className="status-board">
             {OPPORTUNITY_STATUSES.map((status) => (
               <button
@@ -390,6 +635,7 @@ export function OpportunitiesPage() {
                 className={filterStatus === status ? "status-board-card active" : "status-board-card"}
                 onClick={() => {
                   setPage(1);
+                  resetViewSelection();
                   setFilterStatus((current) => (current === status ? "" : status));
                 }}
                 type="button"
@@ -410,7 +656,7 @@ export function OpportunitiesPage() {
             <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
             <span>{selectedId !== null ? `Oportunidade ativa #${selectedId}` : "Nenhuma oportunidade ativa"}</span>
           </div>
-          {listView === "pipeline" ? (
+          {shouldShowPipeline ? (
             <div className="pipeline-grid">
               {pipelineItems.map((column) => (
                 <article key={column.status} className="pipeline-column">
@@ -438,6 +684,55 @@ export function OpportunitiesPage() {
                     {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
                   </div>
                 </article>
+              ))}
+            </div>
+          ) : groupBy !== "none" ? (
+            <div className="grouped-records">
+              {groupedItems.map((group) => (
+                <section key={group.key} className="grouped-records-section">
+                  <div className="grouped-records-head">
+                    <div>
+                      <span className="eyebrow">Agrupamento</span>
+                      <h4>{group.label}</h4>
+                    </div>
+                    <span className="status-pill">{group.items.length}</span>
+                  </div>
+                  <div className="record-list">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.id}
+                        aria-pressed={selectedId === item.id}
+                        className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
+                        onClick={() => populate(item)}
+                        type="button"
+                      >
+                        <div className="record-list-item-main">
+                          <div className="record-list-item-head">
+                            <strong>{item.title}</strong>
+                            <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
+                          </div>
+                          <div className="record-list-item-meta">
+                            <span>{item.company_name || "Sem empresa"}</span>
+                            <span>{item.contact_name || "Sem contato"}</span>
+                            <span>{item.lead_id ? `Lead #${item.lead_id}` : "Sem lead"}</span>
+                            {item.next_activity && <span>{item.next_activity.title}</span>}
+                            {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
+                          </div>
+                        </div>
+                        <div className="record-list-item-side">
+                          <small>Valor listado</small>
+                          <span>{formatCurrency(item.amount)}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {group.items.length === 0 && (
+                      <div className="record-list-empty">
+                        <strong>Nenhuma oportunidade encontrada</strong>
+                        <p>Ajuste a busca ou o status para abrir outro recorte do pipeline.</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
               ))}
             </div>
           ) : (
@@ -483,11 +778,11 @@ export function OpportunitiesPage() {
               <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
                 Anterior
               </button>
-              <span>Página {page}</span>
-              <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
-                Próxima
-              </button>
-            </div>
+                <span>Página {page}</span>
+                <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
+                  Próxima
+                </button>
+              </div>
           </div>
         </article>
 
@@ -775,6 +1070,36 @@ export function OpportunitiesPage() {
             </button>
             <button className="ghost-button" onClick={closeModal} type="button">
               Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
+      <QuickFormModal
+        description="Salve o recorte atual com filtros, agrupamento e modo de exibição."
+        onClose={() => setSavedViewDialogOpen(false)}
+        open={savedViewDialogOpen}
+        title={activeSavedView ? "Atualizar visão" : "Salvar visão"}
+      >
+        <form className="form-card" onSubmit={handleSaveView}>
+          <label className="field">
+            <span>Nome da visão</span>
+            <input value={savedViewName} onChange={(event) => setSavedViewName(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Visão padrão</span>
+            <select value={savedViewDefault ? "yes" : "no"} onChange={(event) => setSavedViewDefault(event.target.value === "yes")}>
+              <option value="no">Não</option>
+              <option value="yes">Sim</option>
+            </select>
+          </label>
+          <div className="form-actions">
+            <button className="primary-button button-with-icon" disabled={savedViewSubmitting} type="submit">
+              <AppIcon name="check" />
+              <span>{savedViewSubmitting ? "Salvando..." : "Salvar visão"}</span>
+            </button>
+            <button className="ghost-button button-with-icon" onClick={() => setSavedViewDialogOpen(false)} type="button">
+              <AppIcon name="close" />
+              <span>Cancelar</span>
             </button>
           </div>
         </form>
