@@ -138,6 +138,13 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
   - `GET /api/v1/health` respondeu `{"status":"ok","database":"up"}`
   - `GET /api/v1/integrations/bling/read-only?module=contacts` respondeu `503` com `Bling integration is disabled.`
 
+## Observacao sobre a rodada de planejamento
+
+- o commit `fdaa6dd` documenta o roadmap de execucao do CRM
+- essa rodada nao alterou o runtime publicado no servidor
+- frontend ativo continua no release `frontend-c357ece-20260401124211`
+- backend publicado continua no commit `02b13e2`
+
 ## Validacao operacional desta entrega
 
 - `npm run build` em `/tmp/optus_hub/frontend`
