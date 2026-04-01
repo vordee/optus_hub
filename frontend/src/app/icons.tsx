@@ -12,7 +12,9 @@ export type AppIconName =
   | "sidebar-close"
   | "logout"
   | "add"
-  | "spark";
+  | "spark"
+  | "edit"
+  | "close";
 
 export function AppIcon({ name }: { name: AppIconName }) {
   const commonProps = {
@@ -55,5 +57,9 @@ export function AppIcon({ name }: { name: AppIconName }) {
       return <svg {...commonProps}><path d="M12 5v14M5 12h14" /></svg>;
     case "spark":
       return <svg {...commonProps}><path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8Z" /></svg>;
+    case "edit":
+      return <svg {...commonProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
+    case "close":
+      return <svg {...commonProps}><path d="m18 6-12 12" /><path d="m6 6 12 12" /></svg>;
   }
 }

@@ -1061,6 +1061,56 @@ tbody tr[role="button"]:focus-visible td {
   gap: 16px;
 }
 
+.quick-form-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 18, 28, 0.52);
+  backdrop-filter: blur(8px);
+}
+
+.quick-form-modal-shell {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(237, 242, 248, 0.98)),
+    var(--surface-strong);
+  box-shadow: 0 24px 64px rgba(9, 17, 27, 0.24);
+}
+
+.quick-form-modal-header,
+.quick-form-modal-body {
+  padding: 18px 20px;
+}
+
+.quick-form-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+}
+
+.quick-form-modal-close {
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.quick-form-modal-body {
+  display: grid;
+  gap: 14px;
+}
+
 .compact-action-form {
   padding-top: 16px;
   border-top: 1px solid var(--line);
@@ -1539,6 +1589,20 @@ tbody tr[role="button"]:focus-visible td {
   .workspace-stat-chip-wide {
     min-width: 0;
     flex: 1 1 calc(50% - 8px);
+  }
+
+  .quick-form-modal-backdrop {
+    padding: 14px;
+  }
+
+  .quick-form-modal-shell {
+    max-height: calc(100vh - 28px);
+    border-radius: 20px;
+  }
+
+  .quick-form-modal-header,
+  .quick-form-modal-body {
+    padding: 16px;
   }
 }
 

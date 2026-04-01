@@ -6,6 +6,7 @@ import { storeOpportunityDraftFromLead } from "../app/crmDrafts";
 import { formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
+import { QuickFormModal } from "../app/QuickFormModal";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
 
 const PAGE_SIZE = 8;
@@ -23,6 +24,7 @@ export function LeadsPage() {
   const [total, setTotal] = useState(0);
   const [contactsLoaded, setContactsLoaded] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({
     contact_id: "",
     title: "",
@@ -85,6 +87,10 @@ export function LeadsPage() {
 
   function populate(item: LeadItem) {
     setSelectedId(item.id);
+    void loadDetail(item.id);
+  }
+
+  function populateForm(item: Pick<LeadItem, "contact_id" | "title" | "description" | "source" | "status">) {
     setForm({
       contact_id: item.contact_id ? String(item.contact_id) : "",
       title: item.title,
@@ -92,7 +98,6 @@ export function LeadsPage() {
       source: item.source || "",
       status: item.status,
     });
-    void loadDetail(item.id);
   }
 
   async function loadDetail(leadId: number) {
@@ -129,6 +134,7 @@ export function LeadsPage() {
       }
       setSelectedId(null);
       setSelectedDetail(null);
+      setIsModalOpen(false);
       setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
       await loadLeads();
     } catch (submitError) {
@@ -140,6 +146,33 @@ export function LeadsPage() {
     setSelectedId(null);
     setSelectedDetail(null);
     setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
+  }
+
+  function openCreateModal() {
+    resetForm();
+    setIsModalOpen(true);
+  }
+
+  function openEditModal() {
+    if (selectedDetail) {
+      setSelectedId(selectedDetail.id);
+      populateForm(selectedDetail);
+      setIsModalOpen(true);
+      return;
+    }
+
+    const selectedItem = items.find((item) => item.id === selectedId);
+    if (!selectedItem) {
+      return;
+    }
+
+    setSelectedId(selectedItem.id);
+    populateForm(selectedItem);
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
   }
 
   function handleCreateOpportunity() {
@@ -179,10 +212,16 @@ export function LeadsPage() {
               </div>
             </div>
             <div className="workspace-actions">
-              <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+              <button className="primary-button button-with-icon" onClick={selectedId !== null ? openEditModal : openCreateModal} type="button">
                 <AppIcon name="add" />
-                <span>{selectedId !== null ? "Novo registro" : "Limpar foco"}</span>
+                <span>{selectedId !== null ? "Editar lead" : "Novo lead"}</span>
               </button>
+              {selectedId !== null && (
+                <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                  <AppIcon name="close" />
+                  <span>Limpar foco</span>
+                </button>
+              )}
             </div>
           </div>
           {error && <div className="inline-error">{error}</div>}
@@ -302,10 +341,16 @@ export function LeadsPage() {
                 <div className="helper-card">
                   <strong>Próximo passo comercial</strong>
                   <p>Abra uma oportunidade pré-preenchida a partir deste lead quando o diagnóstico estiver pronto.</p>
-                  <button className="ghost-button button-with-icon" onClick={handleCreateOpportunity} type="button">
-                    <AppIcon name="spark" />
-                    Abrir oportunidade
-                  </button>
+                  <div className="workspace-actions-tight">
+                    <button className="ghost-button button-with-icon" onClick={openEditModal} type="button">
+                      <AppIcon name="edit" />
+                      <span>Editar lead</span>
+                    </button>
+                    <button className="ghost-button button-with-icon" onClick={handleCreateOpportunity} type="button">
+                      <AppIcon name="spark" />
+                      <span>Abrir oportunidade</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -354,67 +399,65 @@ export function LeadsPage() {
                 <p>O painel contextual mostra etapa, vínculo comercial e histórico antes de qualquer edição.</p>
               </div>
             )}
-
-            <form className="form-card compact-action-form" onSubmit={handleSubmit}>
-              <div className="workspace-header workspace-header-compact">
-                <div className="section-heading">
-                  <span className="eyebrow">Ação rápida</span>
-                  <h3>{selectedId === null ? "Cadastrar lead" : "Ajustar lead"}</h3>
-                </div>
-                {selectedId !== null && (
-                  <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
-                    <AppIcon name="add" />
-                    Novo
-                  </button>
-                )}
-              </div>
-              {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
-              <div className="task-form-grid task-form-grid-2">
-                <label className="field">
-                  <span>Contato</span>
-                  <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
-                    <option value="">Sem vínculo</option>
-                    {safeContacts.map((contact) => (
-                      <option key={contact.id} value={contact.id}>
-                        {contact.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Status</span>
-                  <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-                    {LEAD_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {formatLeadStatus(status)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <label className="field">
-                <span>Título</span>
-                <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-              </label>
-              <div className="task-form-grid task-form-grid-2">
-                <label className="field">
-                  <span>Origem</span>
-                  <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
-                </label>
-                <label className="field">
-                  <span>Descrição curta</span>
-                  <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary-button" type="submit">
-                  {selectedId === null ? "Criar lead" : "Salvar ajustes"}
-                </button>
-              </div>
-            </form>
           </div>
         </aside>
       </section>
+
+      <QuickFormModal
+        description="Ajuste o lead sem quebrar o contexto da fila comercial."
+        onClose={closeModal}
+        open={isModalOpen}
+        title={selectedId === null ? "Novo lead" : "Editar lead"}
+      >
+        <form className="form-card" onSubmit={handleSubmit}>
+          {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
+          <div className="task-form-grid task-form-grid-2">
+            <label className="field">
+              <span>Contato</span>
+              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
+                <option value="">Sem vínculo</option>
+                {safeContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.full_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Status</span>
+              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatLeadStatus(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="field">
+            <span>Título</span>
+            <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+          </label>
+          <div className="task-form-grid task-form-grid-2">
+            <label className="field">
+              <span>Origem</span>
+              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Descrição curta</span>
+              <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {selectedId === null ? "Criar lead" : "Salvar ajustes"}
+            </button>
+            <button className="ghost-button" onClick={closeModal} type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
     </section>
   );
 }

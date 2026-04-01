@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
+import { AppIcon } from "../app/icons";
+import { QuickFormModal } from "../app/QuickFormModal";
 import type { CompanyItem, ContactItem } from "../app/types";
 
 type ContactFormState = {
@@ -51,6 +53,7 @@ export function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<ContactFormState>(EMPTY_FORM);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     void load();
@@ -112,6 +115,25 @@ export function ContactsPage() {
   function startCreate() {
     setSelectedId(null);
     setForm(EMPTY_FORM);
+    setIsModalOpen(true);
+  }
+
+  function startEdit() {
+    if (!selectedContact) {
+      return;
+    }
+
+    populate(selectedContact);
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
+  }
+
+  function resetFormState() {
+    setSelectedId(null);
+    setForm(EMPTY_FORM);
   }
 
   function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: ContactItem) {
@@ -148,8 +170,8 @@ export function ContactsPage() {
           body: JSON.stringify(payload),
         });
       }
-      setSelectedId(null);
-      setForm(EMPTY_FORM);
+      setIsModalOpen(false);
+      resetFormState();
       await load();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar contato.");
@@ -195,91 +217,27 @@ export function ContactsPage() {
 
       <article className="card">
         <div className="stacked-card-sections">
-          <div>
-            <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Novo contato" : "Editar contato"}</h3>
-              <p className="section-copy">
-                Cadastro compacto para criar e corrigir contato sem sair do fluxo.
-              </p>
-            </div>
-
-            <form className="form-card" onSubmit={handleSubmit}>
-              <label className="field">
-                <span>Empresa</span>
-                <select
-                  value={form.company_id}
-                  onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
-                >
-                  <option value="">Sem vínculo</option>
-                  {safeCompanies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.legal_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Nome</span>
-                <input
-                  value={form.full_name}
-                  onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
-                />
-              </label>
-              <label className="field">
-                <span>Email</span>
-                <input
-                  value={form.email}
-                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                />
-              </label>
-              <label className="field">
-                <span>Telefone</span>
-                <input
-                  value={form.phone}
-                  onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                />
-              </label>
-              <label className="field">
-                <span>Cargo</span>
-                <input
-                  value={form.position}
-                  onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))}
-                />
-              </label>
-              <label className="check-field">
-                <input
-                  checked={form.is_active}
-                  onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
-                  type="checkbox"
-                />
-                <span>Contato ativo</span>
-              </label>
-              <div className="form-actions">
-                <button className="primary-button" type="submit">
-                  {selectedId === null ? "Criar contato" : "Atualizar contato"}
-                </button>
-                <button
-                  className="ghost-button"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setForm(EMPTY_FORM);
-                  }}
-                  type="button"
-                >
-                  Limpar
-                </button>
-              </div>
-            </form>
-          </div>
-
           <div className="detail-panel detail-panel-standalone contacts-detail-panel">
-            <div className="section-heading">
-              <span className="eyebrow">Painel do contato</span>
-              <h3>{selectedContact?.full_name || "Nenhum contato selecionado"}</h3>
-              <p className="section-copy">
-                O painel mostra contexto humano do contato sem misturar a lista e o formulário.
-              </p>
+            <div className="workspace-header workspace-header-compact">
+              <div className="section-heading section-heading-compact">
+                <span className="eyebrow">Painel do contato</span>
+                <h3>{selectedContact?.full_name || "Nenhum contato selecionado"}</h3>
+                <p className="section-copy">
+                  O painel mostra contexto humano do contato sem tirar o foco da base.
+                </p>
+              </div>
+              <div className="workspace-actions">
+                <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+                  <AppIcon name="add" />
+                  <span>Novo contato</span>
+                </button>
+                {selectedContact && (
+                  <button className="ghost-button button-with-icon" onClick={startEdit} type="button">
+                    <AppIcon name="edit" />
+                    <span>Editar</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {selectedContact ? (
@@ -328,8 +286,9 @@ export function ContactsPage() {
             <option value="">Todos</option>
             <option value="active">Somente ativos</option>
           </select>
-          <button className="primary-button" onClick={startCreate} type="button">
-            Novo contato
+          <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+            <AppIcon name="add" />
+            <span>Novo contato</span>
           </button>
         </div>
 
@@ -384,6 +343,83 @@ export function ContactsPage() {
           </div>
         )}
       </article>
+
+      <QuickFormModal
+        description="Cadastro curto para criar ou corrigir um contato sem perder a lista de vista."
+        onClose={closeModal}
+        open={isModalOpen}
+        title={selectedId === null ? "Novo contato" : "Editar contato"}
+      >
+        <form className="form-card" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Empresa</span>
+            <select
+              value={form.company_id}
+              onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
+            >
+              <option value="">Sem vínculo</option>
+              {safeCompanies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.legal_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Nome</span>
+            <input
+              value={form.full_name}
+              onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
+            />
+          </label>
+          <div className="task-form-grid task-form-grid-2">
+            <label className="field">
+              <span>Email</span>
+              <input
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              />
+            </label>
+            <label className="field">
+              <span>Telefone</span>
+              <input
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span>Cargo</span>
+            <input
+              value={form.position}
+              onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))}
+            />
+          </label>
+          <label className="check-field">
+            <input
+              checked={form.is_active}
+              onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
+              type="checkbox"
+            />
+            <span>Contato ativo</span>
+          </label>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {selectedId === null ? "Criar contato" : "Atualizar contato"}
+            </button>
+            <button
+              className="ghost-button"
+              onClick={() => {
+                closeModal();
+                resetFormState();
+              }}
+              type="button"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
     </section>
   );
 }
