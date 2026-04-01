@@ -14,6 +14,7 @@
 - `NoNewPrivileges=true`
 - `PrivateTmp=true`
 - `ProtectSystem=full`
+- runtime observado: `/opt/optus_hub/backend/.venv/bin/python3.11`
 
 ## Pendencias
 
@@ -32,3 +33,7 @@ Comandos uteis:
 - `journalctl -u optus-hub-api -f`
 - `journalctl -u optus-hub-api --since "15 min ago"`
 - `curl -s -o /dev/null -w "status=%{http_code} total=%{time_total}\n" http://127.0.0.1:8000/api/v1/health`
+
+## Observacao pratica
+
+Foi observado que o `pip` exposto dentro da venv pode conter shebang antigo. Para manutencao, prefira validar o interpretador primeiro e evite assumir que o launcher `pip` da venv esta saudável sem checagem.

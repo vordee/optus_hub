@@ -4,14 +4,18 @@ Sistema web corporativo para gerir o fluxo operacional ponta a ponta, da entrada
 
 ## Status
 
-Este repositório está em fase de fundação. A estrutura inicial foi materializada para servir de base de implementação, mas os módulos ainda não estão codificados.
+O repositório já saiu da fase apenas estrutural.
 
-O objetivo desta etapa é deixar claro:
+Neste momento existem entregas reais em operação:
 
-- o que já existe no Git
-- como o monorepo está organizado
-- quais decisões arquiteturais já foram assumidas
-- onde a implementação deve começar
+- autenticação e sessão
+- usuários, papéis e permissões
+- auditoria
+- CRM com empresas, contatos, leads e oportunidades
+- kickoff comercial para projeto
+- projetos com fases, tarefas, checklist e histórico
+- frontend React publicado no host `10.222.222.33`
+- backend FastAPI ativo via systemd
 
 ## Objetivo do produto
 
@@ -53,9 +57,9 @@ Lead -> CRM -> Qualificação -> Diagnóstico -> Comercial -> Proposta -> Aprova
 ## Runtime minimo atual
 
 - Python 3.11+
-- PostgreSQL 15+
+- PostgreSQL 13+
 - Redis 7+
-- Node.js 22+
+- Node.js 20+
 
 ## Organização arquitetural
 
@@ -149,6 +153,7 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 - `docs/arquitetura/modulos.md`
 - `docs/arquitetura/fluxo-pop.md`
 - `docs/arquitetura/integracoes.md`
+- `docs/deploy/runtime-current-state.md`
 - `prompts/`
 
 ## Operação com agents

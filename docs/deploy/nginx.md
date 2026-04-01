@@ -16,6 +16,13 @@
 - rate limiting por IP
 - headers defensivos para a superficie HTTPS
 - certificado local em `/etc/nginx/tls/optus-hub.crt`
+- root servido atualmente: `/var/www/optus-hub/frontend`
+
+## Regra critica
+
+O frontend publicado nao e servido de `/opt/optus_hub/frontend/dist`.
+
+O deploy correto do frontend precisa atualizar o release em `/var/www/optus-hub/releases/` e apontar o symlink `/var/www/optus-hub/frontend` para o release ativo.
 
 ## Pendencias
 
