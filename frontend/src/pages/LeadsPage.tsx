@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
+
+const PAGE_SIZE = 8;
 
 export function LeadsPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
@@ -13,9 +15,12 @@ export function LeadsPage() {
   const [selectedDetail, setSelectedDetail] = useState<LeadDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [leadView, setLeadView] = useState<"painel" | "cadastro">("painel");
   const [form, setForm] = useState({
     contact_id: "",
@@ -24,28 +29,38 @@ export function LeadsPage() {
     source: "",
     status: "new",
   });
-  const statusStats = {
-    new: items.filter((item) => item.status === "new").length,
-    qualified: items.filter((item) => item.status === "qualified").length,
-    proposal: items.filter((item) => item.status === "proposal").length,
-    won: items.filter((item) => item.status === "won").length,
-  };
+  const statusStats = useMemo(
+    () => ({
+      new: items.filter((item) => item.status === "new").length,
+      qualified: items.filter((item) => item.status === "qualified").length,
+      proposal: items.filter((item) => item.status === "proposal").length,
+      won: items.filter((item) => item.status === "won").length,
+    }),
+    [items],
+  );
   const safeContacts = ensureArray(contacts);
   const safeHistory = ensureArray(selectedDetail?.history);
 
   useEffect(() => {
-    void loadLeads();
-  }, [page, query, filterStatus]);
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
-    void loadContacts();
-  }, []);
+    void loadLeads();
+  }, [page, debouncedQuery, filterStatus]);
+
+  useEffect(() => {
+    if (leadView === "cadastro" && !contactsLoaded && !contactsLoading) {
+      void loadContacts();
+    }
+  }, [contactsLoaded, contactsLoading, leadView]);
 
   async function loadLeads() {
     try {
       setError(null);
       const leadResponse = await apiRequest<LeadListResponse>(
-        `/v1/crm/leads?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+        `/v1/crm/leads?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(debouncedQuery)}&status=${encodeURIComponent(filterStatus)}`,
       );
       setItems(ensureArray(leadResponse.items));
       setTotal(leadResponse.total);
@@ -55,11 +70,15 @@ export function LeadsPage() {
   }
 
   async function loadContacts() {
+    setContactsLoading(true);
     try {
       const contactItems = await apiRequest<ContactItem[]>("/v1/crm/contacts");
       setContacts(ensureArray(contactItems));
+      setContactsLoaded(true);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar contatos.");
+    } finally {
+      setContactsLoading(false);
     }
   }
 
@@ -207,7 +226,7 @@ export function LeadsPage() {
           <div className="pager-actions">
             <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
             <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
           </div>
         </div>
       </article>
@@ -311,6 +330,7 @@ export function LeadsPage() {
               <span className="eyebrow">Cadastro</span>
               <h3>{selectedId === null ? "Novo lead" : "Editar lead"}</h3>
             </div>
+            {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
             <label className="field">
               <span>Contato</span>
               <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>

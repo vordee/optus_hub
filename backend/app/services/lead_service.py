@@ -92,9 +92,10 @@ class LeadService:
 
         return self.lead_repository.save(lead)
 
-    def list_status_history(self, lead_id: int):
-        self.get_lead(lead_id)
-        return self.status_history_repository.list_for_entity(entity_type="lead", entity_id=lead_id)
+    def list_status_history(self, lead_id: int, *, lead: Lead | None = None):
+        if lead is None:
+            lead = self.get_lead(lead_id)
+        return self.status_history_repository.list_for_entity(entity_type="lead", entity_id=lead.id)
 
     def _resolve_relationships(self, company_id: int | None, contact_id: int | None) -> tuple[int | None, int | None]:
         company = self.company_repository.get_by_id(company_id) if company_id is not None else None

@@ -129,15 +129,17 @@ class OpportunityService:
         )
         return self.opportunity_repository.save(opportunity)
 
-    def list_status_history(self, opportunity_id: int):
-        self.get_opportunity(opportunity_id)
+    def list_status_history(self, opportunity_id: int, *, opportunity: Opportunity | None = None):
+        if opportunity is None:
+            opportunity = self.get_opportunity(opportunity_id)
         return self.status_history_repository.list_for_entity(
             entity_type="opportunity",
-            entity_id=opportunity_id,
+            entity_id=opportunity.id,
         )
 
-    def list_next_statuses(self, opportunity_id: int) -> list[str]:
-        opportunity = self.get_opportunity(opportunity_id)
+    def list_next_statuses(self, opportunity_id: int, *, opportunity: Opportunity | None = None) -> list[str]:
+        if opportunity is None:
+            opportunity = self.get_opportunity(opportunity_id)
         return sorted(OPPORTUNITY_TRANSITIONS[opportunity.status])
 
     def _resolve_relationships(

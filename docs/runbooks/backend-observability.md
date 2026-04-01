@@ -1,46 +1,61 @@
 # Backend Observability
 
-Runbook curto para medir disponibilidade e latencia do backend atual sem adicionar stack nova.
+Runbook curto para medir latencia de `leads` e `opportunities` no backend atual, usando a observabilidade ja existente.
 
 ## Objetivo
 
-- confirmar que o servico responde
-- medir latencia bruta de endpoints
-- coletar contexto de falhas no journald
-- separar gargalos por rota sem instrumentar cada service manualmente
+- confirmar que a rota responde
+- medir latencia bruta por endpoint
+- correlacionar resposta lenta com `journalctl`
+- separar gargalo de consulta, serializacao ou dependencia externa
 
-## Verificacao rapida
+## Como medir
 
-1. Validar saude do backend:
+1. Use um token ou sessao valida do ambiente.
 
-   - `curl -fsS http://127.0.0.1:8000/api/v1/health`
+2. Meça a lista de leads:
 
-2. Medir tempo total de resposta:
+   ```bash
+   curl -s -o /dev/null -D - \
+     -w "status=%{http_code} connect=%{time_connect} ttfb=%{time_starttransfer} total=%{time_total}\n" \
+     -H "Authorization: Bearer $TOKEN" \
+     "http://127.0.0.1:8000/api/v1/crm/leads?page=1&page_size=20"
+   ```
 
-   - `curl -s -o /dev/null -w "status=%{http_code} connect=%{time_connect} ttfb=%{time_starttransfer} total=%{time_total}\n" http://127.0.0.1:8000/api/v1/health`
+3. Meça a lista de opportunities:
 
-3. Observar a rota observada pelo backend:
+   ```bash
+   curl -s -o /dev/null -D - \
+     -w "status=%{http_code} connect=%{time_connect} ttfb=%{time_starttransfer} total=%{time_total}\n" \
+     -H "Authorization: Bearer $TOKEN" \
+     "http://127.0.0.1:8000/api/v1/crm/opportunities?page=1&page_size=20"
+   ```
 
-   - `journalctl -u optus-hub-api --since "15 min ago" | rg "request_completed.*route=/api/v1/projects|request_completed.*route=/api/v1/projects/.*/tasks|request_completed.*route=/api/v1/opportunities"`
+4. Para detalhar uma entidade lenta, repita com o `id` correspondente:
 
-4. Observar erros recentes do servico:
+   - `GET /api/v1/crm/leads/{lead_id}`
+   - `GET /api/v1/crm/opportunities/{opportunity_id}`
 
-   - `journalctl -u optus-hub-api --since "15 min ago"`
+5. Leia o tempo retornado pela propria aplicacao no header `x-request-time-ms`.
 
-5. Acompanhar comportamento durante reproducoes:
+6. Correlacione com os logs do servico:
 
-   - `journalctl -u optus-hub-api -f`
+   ```bash
+   journalctl -u optus-hub-api --since "15 min ago" | rg "request_(completed|failed).*route=/api/v1/crm/(leads|opportunities)"
+   ```
 
-## Leitura
+## Sinais de gargalo
 
-- `status` diferente de `200` indica erro funcional ou dependencia indisponivel.
-- `elapsed_ms` no log e `x-request-time-ms` na resposta ajudam a comparar o custo de uma rota especifica.
-- `total` crescendo sem erro costuma apontar para consulta lenta ou espera em backend.
-- Falhas recorrentes no `journalctl` devem ser correlacionadas com horario exato da requisicao e mudancas recentes no deploy.
+- `total` alto no `curl` e `x-request-time-ms` alto no mesmo request indica custo real no backend.
+- `ttfb` alto com `total` alto costuma apontar para query lenta ou serializacao pesada.
+- `request_failed` recorrente indica erro funcional ou dependencia indisponivel.
+- `request_completed` acima de `500ms` ja passa do limiar que o backend marca como `warning` no log.
+- Se `list` fica lento e `detail` nao, suspeite de filtro, ordenacao ou paginacao.
+- Se `detail` tambem fica lento, suspeite de joins, acesso a relacoes ou carga geral do banco.
 
-## Rotas mais uteis para perf
+## Leituras uteis
 
-- `GET /api/v1/projects` e `GET /api/v1/projects/{project_id}`
-- `GET /api/v1/projects/{project_id}/tasks`
-- `GET /api/v1/opportunities` e `GET /api/v1/opportunities/{opportunity_id}`
-- `GET /api/v1/crm/companies` e `GET /api/v1/crm/contacts`
+- `GET /api/v1/crm/leads` e `GET /api/v1/crm/opportunities` para medir comportamento agregado.
+- `GET /api/v1/crm/leads/{lead_id}` e `GET /api/v1/crm/opportunities/{opportunity_id}` para isolar uma entidade.
+- `journalctl -u optus-hub-api -f` para acompanhar reproducoes em tempo real.
+

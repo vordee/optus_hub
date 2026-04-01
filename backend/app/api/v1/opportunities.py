@@ -96,8 +96,8 @@ def get_opportunity(opportunity_id: int) -> OpportunityDetailResponse:
         linked_project = project_service.get_by_opportunity_id(opportunity_id)
         return OpportunityDetailResponse(
             **serialize_opportunity(opportunity).model_dump(),
-            next_statuses=service.list_next_statuses(opportunity_id),
-            history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id)],
+            next_statuses=service.list_next_statuses(opportunity_id, opportunity=opportunity),
+            history=[serialize_status_history(item) for item in service.list_status_history(opportunity_id, opportunity=opportunity)],
             linked_project=(
                 OpportunityProjectSummary(
                     id=linked_project.id,

@@ -52,10 +52,13 @@ def list_leads(
 
 @router.get("/leads/{lead_id}", response_model=LeadDetailResponse, dependencies=[Depends(require_permission("leads:read"))])
 def get_lead(lead_id: int) -> LeadDetailResponse:
-    with SessionLocal() as db:
-        service = LeadService(db)
-        lead = service.get_lead(lead_id)
-        return LeadDetailResponse(**serialize_lead(lead).model_dump(), history=[serialize_status_history(item) for item in service.list_status_history(lead_id)])
+        with SessionLocal() as db:
+            service = LeadService(db)
+            lead = service.get_lead(lead_id)
+        return LeadDetailResponse(
+            **serialize_lead(lead).model_dump(),
+            history=[serialize_status_history(item) for item in service.list_status_history(lead_id, lead=lead)],
+        )
 
 
 @router.post("/leads", response_model=LeadResponse, dependencies=[Depends(require_permission("leads:write"))])

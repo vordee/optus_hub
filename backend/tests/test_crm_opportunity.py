@@ -56,6 +56,25 @@ def test_update_opportunity_status_and_amount(db_session) -> None:
     assert history[0].to_status == "proposal"
 
 
+def test_detail_helpers_reuse_loaded_opportunity(db_session) -> None:
+    service = OpportunityService(db_session)
+    opportunity = service.create_opportunity(
+        OpportunityCreateRequest(title="Oportunidade inicial", status="open", amount=1000)
+    )
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("get_opportunity should not be called when the opportunity is already loaded.")
+
+    service.get_opportunity = fail_if_called  # type: ignore[method-assign]
+
+    next_statuses = service.list_next_statuses(opportunity.id, opportunity=opportunity)
+    history = service.list_status_history(opportunity.id, opportunity=opportunity)
+
+    assert next_statuses == ["lost", "proposal"]
+    assert len(history) == 1
+    assert history[0].to_status == "open"
+
+
 def test_opportunity_rejects_mismatched_lead_and_company(db_session) -> None:
     company_a = CompanyService(db_session).create_company(
         CompanyCreateRequest(legal_name="Empresa A", tax_id="12345678000199")

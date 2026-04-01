@@ -61,6 +61,26 @@ def test_update_lead_status_and_title(db_session) -> None:
     assert history[0].to_status == "qualified"
 
 
+def test_list_status_history_reuses_loaded_lead(db_session) -> None:
+    service = LeadService(db_session)
+    lead = service.create_lead(
+        LeadCreateRequest(
+            title="Lead inicial",
+            status="new",
+        )
+    )
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("get_lead should not be called when the lead is already loaded.")
+
+    service.get_lead = fail_if_called  # type: ignore[method-assign]
+
+    history = service.list_status_history(lead.id, lead=lead)
+
+    assert len(history) == 1
+    assert history[0].to_status == "new"
+
+
 def test_lead_rejects_mismatched_company_and_contact(db_session) -> None:
     company_a = CompanyService(db_session).create_company(
         CompanyCreateRequest(

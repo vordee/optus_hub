@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
-import type { LeadItem, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
+import type { LeadItem, LeadListResponse, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
+
+const PAGE_SIZE = 8;
 
 function formatDateOnly(value: string | null) {
   if (!value) {
@@ -28,9 +30,12 @@ export function OpportunitiesPage() {
   const [selectedDetail, setSelectedDetail] = useState<OpportunityDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [leadsLoaded, setLeadsLoaded] = useState(false);
+  const [leadsLoading, setLeadsLoading] = useState(false);
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [opportunityView, setOpportunityView] = useState<"painel" | "cadastro">("painel");
@@ -47,31 +52,41 @@ export function OpportunitiesPage() {
     status: "open",
     amount: "",
   });
-  const amountTotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
-  const statusStats = {
-    open: items.filter((item) => item.status === "open").length,
-    proposal: items.filter((item) => item.status === "proposal").length,
-    won: items.filter((item) => item.status === "won").length,
-    lost: items.filter((item) => item.status === "lost").length,
-  };
+  const amountTotal = useMemo(() => items.reduce((sum, item) => sum + (item.amount || 0), 0), [items]);
+  const statusStats = useMemo(
+    () => ({
+      open: items.filter((item) => item.status === "open").length,
+      proposal: items.filter((item) => item.status === "proposal").length,
+      won: items.filter((item) => item.status === "won").length,
+      lost: items.filter((item) => item.status === "lost").length,
+    }),
+    [items],
+  );
   const selectedListItem = items.find((item) => item.id === selectedId) || null;
   const safeLeads = ensureArray(leads);
   const safeNextStatuses = ensureArray(selectedDetail?.next_statuses);
   const safeHistory = ensureArray(selectedDetail?.history);
 
   useEffect(() => {
-    void loadOpportunities();
-  }, [page, query, filterStatus]);
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
-    void loadLeads();
-  }, []);
+    void loadOpportunities();
+  }, [page, debouncedQuery, filterStatus]);
+
+  useEffect(() => {
+    if (opportunityView === "cadastro" && !leadsLoaded && !leadsLoading) {
+      void loadLeads();
+    }
+  }, [leadsLoaded, leadsLoading, opportunityView]);
 
   async function loadOpportunities() {
     try {
       setError(null);
       const response = await apiRequest<OpportunityListResponse>(
-        `/v1/crm/opportunities?page=${page}&page_size=8&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+        `/v1/crm/opportunities?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(debouncedQuery)}&status=${encodeURIComponent(filterStatus)}`,
       );
       setItems(ensureArray(response.items));
       setTotal(response.total);
@@ -81,11 +96,16 @@ export function OpportunitiesPage() {
   }
 
   async function loadLeads() {
+    setLeadsLoading(true);
     try {
-      const leadItems = await apiRequest<LeadItem[]>("/v1/crm/leads");
+      const leadResponse = await apiRequest<LeadListResponse>("/v1/crm/leads?page=1&page_size=25");
+      const leadItems = ensureArray(leadResponse.items);
       setLeads(ensureArray(leadItems));
+      setLeadsLoaded(true);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar leads de apoio.");
+    } finally {
+      setLeadsLoading(false);
     }
   }
 
@@ -316,7 +336,7 @@ export function OpportunitiesPage() {
               Anterior
             </button>
             <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * 8 >= total} onClick={() => setPage((current) => current + 1)} type="button">
+            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
               Próxima
             </button>
           </div>
@@ -539,6 +559,7 @@ export function OpportunitiesPage() {
                 Use este formulário para criação rápida ou correção cadastral. A operação continua concentrada no painel comercial.
               </p>
             </div>
+            {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
             <label className="field">
               <span>Lead</span>
               <select
