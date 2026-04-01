@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { apiRequest, ApiError, login } from "./api";
 import { ensureArray } from "./arrays";
 import { clearToken, getStoredToken, storeToken } from "./auth";
+import { AppIcon, type AppIconName } from "./icons";
 import type { AuthenticatedUser, NavKey } from "./types";
 import { AuditPage } from "../pages/AuditPage";
 import { CompaniesPage } from "../pages/CompaniesPage";
@@ -24,7 +25,7 @@ interface SessionState {
 interface NavItem {
   key: NavKey;
   label: string;
-  icon: IconName;
+  icon: AppIconName;
   description: string;
 }
 
@@ -33,20 +34,6 @@ interface NavSection {
   summary: string;
   items: NavItem[];
 }
-
-type IconName =
-  | "dashboard"
-  | "companies"
-  | "contacts"
-  | "leads"
-  | "opportunities"
-  | "projects"
-  | "users"
-  | "roles"
-  | "audit"
-  | "sidebar-open"
-  | "sidebar-close"
-  | "logout";
 
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -89,46 +76,6 @@ const NAV_KEYS = new Set<NavKey>(NAV_SECTIONS.flatMap((section) => section.items
 function getNavFromHash(hash: string): NavKey | null {
   const candidate = hash.replace(/^#/, "");
   return NAV_KEYS.has(candidate as NavKey) ? (candidate as NavKey) : null;
-}
-
-function AppIcon({ name }: { name: IconName }) {
-  const commonProps = {
-    className: "app-icon-svg",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-
-  switch (name) {
-    case "dashboard":
-      return <svg {...commonProps}><path d="M4 5h7v6H4zM13 5h7v10h-7zM4 13h7v6H4zM13 17h7v2h-7z" /></svg>;
-    case "companies":
-      return <svg {...commonProps}><path d="M4 20V6l8-3 8 3v14" /><path d="M9 20v-4h6v4" /><path d="M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01" /></svg>;
-    case "contacts":
-      return <svg {...commonProps}><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M20 8v6" /><path d="M23 11h-6" /></svg>;
-    case "leads":
-      return <svg {...commonProps}><path d="m4 12 5 5L20 6" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>;
-    case "opportunities":
-      return <svg {...commonProps}><path d="M4 19h16" /><path d="M7 16V9" /><path d="M12 16V5" /><path d="M17 16v-3" /></svg>;
-    case "projects":
-      return <svg {...commonProps}><path d="M3 7h18" /><path d="M7 3v4" /><path d="M17 3v4" /><rect x="4" y="5" width="16" height="16" rx="2" /><path d="M8 11h8M8 15h5" /></svg>;
-    case "users":
-      return <svg {...commonProps}><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
-    case "roles":
-      return <svg {...commonProps}><path d="m12 2 7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4Z" /><path d="m9 12 2 2 4-4" /></svg>;
-    case "audit":
-      return <svg {...commonProps}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /><path d="M11 8v3l2 2" /></svg>;
-    case "sidebar-open":
-      return <svg {...commonProps}><path d="M4 5h16v14H4z" /><path d="M9 5v14" /><path d="m13 12 3-3" /><path d="m13 12 3 3" /></svg>;
-    case "sidebar-close":
-      return <svg {...commonProps}><path d="M4 5h16v14H4z" /><path d="M15 5v14" /><path d="m11 12-3-3" /><path d="m11 12-3 3" /></svg>;
-    case "logout":
-      return <svg {...commonProps}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>;
-  }
 }
 
 export function App() {
@@ -208,7 +155,9 @@ export function App() {
   const safeRoles = ensureArray(session.user.roles);
 
   return (
-    <div className={sidebarCollapsed ? "app-frame sidebar-collapsed" : "app-frame"}>
+    <>
+      <a className="skip-link" href="#main-content">Pular navegação</a>
+      <div className={sidebarCollapsed ? "app-frame sidebar-collapsed" : "app-frame"}>
       <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-logo-surface">
@@ -284,7 +233,7 @@ export function App() {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <span className="eyebrow topbar-kicker">
@@ -307,7 +256,8 @@ export function App() {
         {activeNav === "opportunities" && <OpportunitiesPage />}
         {activeNav === "projects" && <ProjectsPage />}
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 

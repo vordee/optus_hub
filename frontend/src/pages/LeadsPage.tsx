@@ -4,6 +4,7 @@ import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { storeOpportunityDraftFromLead } from "../app/crmDrafts";
 import { formatDateTime } from "../app/format";
+import { AppIcon } from "../app/icons";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
 
@@ -40,7 +41,6 @@ export function LeadsPage() {
   );
   const safeContacts = ensureArray(contacts);
   const safeHistory = ensureArray(selectedDetail?.history);
-  const hasFilters = filterStatus.length > 0 || debouncedQuery.length > 0;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
@@ -153,58 +153,39 @@ export function LeadsPage() {
 
   return (
     <section className="page-grid single">
-      <article className="card">
-        <div className="workspace-header">
-          <div className="section-heading">
-            <span className="eyebrow">CRM</span>
-            <h3>Leads</h3>
-            <p className="section-copy">
-              Entrada comercial em modo operacional: fila principal, contexto imediato e edição rápida sem trocar de tela.
-            </p>
-          </div>
-          <div className="workspace-actions">
-            <button className="primary-button" onClick={resetForm} type="button">
-              Novo lead
-            </button>
-          </div>
-        </div>
-        {error && <div className="inline-error">{error}</div>}
-        <div className="crm-summary-grid compact-summary-grid">
-          <div className="metric-card">
-            <span>Novos</span>
-            <strong>{statusStats.new}</strong>
-            <small>entrada recente da página</small>
-          </div>
-          <div className="metric-card">
-            <span>Qualificados</span>
-            <strong>{statusStats.qualified}</strong>
-            <small>prontos para diagnóstico</small>
-          </div>
-          <div className="metric-card">
-            <span>Em proposta</span>
-            <strong>{statusStats.proposal}</strong>
-            <small>negociação ativa</small>
-          </div>
-          <div className="metric-card">
-            <span>Ganhos</span>
-            <strong>{statusStats.won}</strong>
-            <small>conversão no recorte atual</small>
-          </div>
-        </div>
-      </article>
-
       <section className="crm-console">
         <article className="card crm-console-main">
-          <div className="workspace-header workspace-header-compact">
-            <div className="section-heading">
-              <span className="eyebrow">Fila comercial</span>
-              <h3>Base ativa</h3>
+          <div className="workspace-header workspace-header-compact workspace-header-with-stats">
+            <div className="section-heading section-heading-compact">
+              <span className="eyebrow">CRM</span>
+              <h3>Leads</h3>
             </div>
-            <div className="table-summary">
-              <span>{total} leads</span>
-              <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
+            <div className="workspace-stat-strip">
+              <div className="workspace-stat-chip">
+                <span>Novos</span>
+                <strong>{statusStats.new}</strong>
+              </div>
+              <div className="workspace-stat-chip">
+                <span>Qualificados</span>
+                <strong>{statusStats.qualified}</strong>
+              </div>
+              <div className="workspace-stat-chip">
+                <span>Em proposta</span>
+                <strong>{statusStats.proposal}</strong>
+              </div>
+              <div className="workspace-stat-chip">
+                <span>Ganhos</span>
+                <strong>{statusStats.won}</strong>
+              </div>
+            </div>
+            <div className="workspace-actions">
+              <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                <AppIcon name="add" />
+                <span>{selectedId !== null ? "Novo registro" : "Limpar foco"}</span>
+              </button>
             </div>
           </div>
+          {error && <div className="inline-error">{error}</div>}
           <div className="toolbar">
             <input
               placeholder="Buscar por título ou origem"
@@ -321,7 +302,8 @@ export function LeadsPage() {
                 <div className="helper-card">
                   <strong>Próximo passo comercial</strong>
                   <p>Abra uma oportunidade pré-preenchida a partir deste lead quando o diagnóstico estiver pronto.</p>
-                  <button className="ghost-button" onClick={handleCreateOpportunity} type="button">
+                  <button className="ghost-button button-with-icon" onClick={handleCreateOpportunity} type="button">
+                    <AppIcon name="spark" />
                     Abrir oportunidade
                   </button>
                 </div>
@@ -380,7 +362,8 @@ export function LeadsPage() {
                   <h3>{selectedId === null ? "Cadastrar lead" : "Ajustar lead"}</h3>
                 </div>
                 {selectedId !== null && (
-                  <button className="ghost-button" onClick={resetForm} type="button">
+                  <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                    <AppIcon name="add" />
                     Novo
                   </button>
                 )}

@@ -4,6 +4,7 @@ import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { consumeOpportunityDraft } from "../app/crmDrafts";
 import { formatCurrency, formatDateTime } from "../app/format";
+import { AppIcon } from "../app/icons";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
 import type { LeadItem, LeadListResponse, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
 
@@ -257,54 +258,36 @@ export function OpportunitiesPage() {
 
   return (
     <section className="page-grid single">
-      <article className="card">
-        <div className="workspace-header">
-          <div className="section-heading">
-            <span className="eyebrow">CRM</span>
-            <h3>Oportunidades</h3>
-            <p className="section-copy">
-              Mesa comercial com leitura de estágio, transição guiada e ponte para kickoff sem trocar o foco da carteira.
-            </p>
-          </div>
-          <div className="workspace-actions">
-            <button className="primary-button" onClick={resetForm} type="button">
-              Nova oportunidade
-            </button>
-          </div>
-        </div>
-        {error && <div className="inline-error">{error}</div>}
-        <div className="crm-summary-grid compact-summary-grid">
-          <div className="metric-card">
-            <span>Abertas</span>
-            <strong>{statusStats.open}</strong>
-            <small>trabalhando descoberta</small>
-          </div>
-          <div className="metric-card">
-            <span>Em proposta</span>
-            <strong>{statusStats.proposal}</strong>
-            <small>negociação ativa</small>
-          </div>
-          <div className="metric-card">
-            <span>Ganhas</span>
-            <strong>{statusStats.won}</strong>
-            <small>entrada para projetos</small>
-          </div>
-          <div className="metric-card">
-            <span>Valor listado</span>
-            <strong>{formatCurrency(amountTotal)}</strong>
-            <small>somatório da página</small>
-          </div>
-        </div>
-      </article>
-
       <section className="crm-console crm-console-wide">
         <article className="card crm-console-main">
-          <div className="workspace-header workspace-header-compact">
-            <div className="section-heading">
-              <span className="eyebrow">Carteira comercial</span>
-              <h3>Negócios em trabalho</h3>
+          <div className="workspace-header workspace-header-compact workspace-header-with-stats">
+            <div className="section-heading section-heading-compact">
+              <span className="eyebrow">CRM</span>
+              <h3>Oportunidades</h3>
+            </div>
+            <div className="workspace-stat-strip">
+              <div className="workspace-stat-chip">
+                <span>Abertas</span>
+                <strong>{statusStats.open}</strong>
+              </div>
+              <div className="workspace-stat-chip">
+                <span>Em proposta</span>
+                <strong>{statusStats.proposal}</strong>
+              </div>
+              <div className="workspace-stat-chip">
+                <span>Ganhas</span>
+                <strong>{statusStats.won}</strong>
+              </div>
+              <div className="workspace-stat-chip workspace-stat-chip-wide">
+                <span>Valor listado</span>
+                <strong>{formatCurrency(amountTotal)}</strong>
+              </div>
             </div>
             <div className="workspace-actions workspace-actions-tight">
+              <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                <AppIcon name="add" />
+                <span>{selectedId !== null ? "Novo registro" : "Limpar foco"}</span>
+              </button>
               <div className="table-summary">
                 <span>{total} oportunidades</span>
                 <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
@@ -327,6 +310,7 @@ export function OpportunitiesPage() {
               </div>
             </div>
           </div>
+          {error && <div className="inline-error">{error}</div>}
           <div className="toolbar">
             <input
               placeholder="Buscar por título"
@@ -580,7 +564,8 @@ export function OpportunitiesPage() {
                           />
                         </label>
                       </div>
-                      <button className="primary-button" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
+                      <button className="primary-button button-with-icon" disabled={kickoffSubmitting} onClick={() => void handleKickoff()} type="button">
+                        <AppIcon name="spark" />
                         {kickoffSubmitting ? "Abrindo projeto..." : "Abrir projeto"}
                       </button>
                     </>
@@ -613,10 +598,11 @@ export function OpportunitiesPage() {
                   {safeNextStatuses.map((status) => (
                     <button
                       key={status}
-                      className="ghost-button"
+                      className="ghost-button button-with-icon"
                       onClick={() => void handleTransition(status)}
                       type="button"
                     >
+                      <AppIcon name="spark" />
                       Ir para {formatOpportunityStatus(status)}
                     </button>
                   ))}
@@ -655,7 +641,8 @@ export function OpportunitiesPage() {
                   <h3>{selectedId === null ? "Cadastrar oportunidade" : "Ajustar oportunidade"}</h3>
                 </div>
                 {selectedId !== null && (
-                  <button className="ghost-button" onClick={resetForm} type="button">
+                  <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                    <AppIcon name="add" />
                     Novo
                   </button>
                 )}

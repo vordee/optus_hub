@@ -46,7 +46,23 @@ textarea {
 }
 
 .app-frame.sidebar-collapsed {
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 72px 1fr;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 16px;
+  z-index: 20;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-dark);
+  color: #edf3f8;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 16px;
 }
 
 .sidebar {
@@ -308,13 +324,18 @@ tbody tr[role="button"]:focus-visible {
 
 .app-frame.sidebar-collapsed .nav-item {
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   padding: 0;
 }
 
 .app-frame.sidebar-collapsed .nav-item-content,
 .app-frame.sidebar-collapsed .button-with-icon {
   gap: 0;
+}
+
+.app-frame.sidebar-collapsed .nav-item-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .app-frame.sidebar-collapsed .sidebar-footer {
@@ -412,6 +433,10 @@ tbody tr[role="button"]:focus-visible {
   max-width: 70ch;
 }
 
+.section-heading-compact {
+  margin-bottom: 0;
+}
+
 .workspace-header {
   display: flex;
   justify-content: space-between;
@@ -424,6 +449,10 @@ tbody tr[role="button"]:focus-visible {
   margin-bottom: 10px;
 }
 
+.workspace-header-with-stats {
+  align-items: center;
+}
+
 .workspace-actions,
 .workspace-actions-tight {
   display: flex;
@@ -431,6 +460,38 @@ tbody tr[role="button"]:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.workspace-stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.workspace-stat-chip {
+  display: grid;
+  gap: 2px;
+  min-width: 104px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.workspace-stat-chip span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.workspace-stat-chip strong {
+  display: block;
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.workspace-stat-chip-wide {
+  min-width: 148px;
 }
 
 .metric-grid {
@@ -1425,6 +1486,10 @@ tbody tr[role="button"]:focus-visible td {
     flex-direction: column;
   }
 
+  .workspace-header-with-stats {
+    align-items: stretch;
+  }
+
   .metric-grid {
     grid-template-columns: 1fr;
   }
@@ -1457,6 +1522,12 @@ tbody tr[role="button"]:focus-visible td {
     justify-items: start;
     text-align: left;
   }
+
+  .workspace-stat-chip,
+  .workspace-stat-chip-wide {
+    min-width: 0;
+    flex: 1 1 calc(50% - 8px);
+  }
 }
 
 @media (max-width: 720px) {
@@ -1471,6 +1542,11 @@ tbody tr[role="button"]:focus-visible td {
 
   .project-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-stat-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .crm-summary-grid,
