@@ -133,8 +133,6 @@ export function App() {
           </div>
           <div className="brand-copy">
             <div className="brand-kicker">Optus Hub</div>
-            <h1>Software house operacional</h1>
-            <p>Administração, CRM e entrega em uma única superfície.</p>
           </div>
         </div>
 

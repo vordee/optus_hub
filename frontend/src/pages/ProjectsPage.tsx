@@ -1151,6 +1151,8 @@ function PhaseCard({
   phase: ProjectPhaseItem;
   tasks: ProjectTaskItem[];
 }) {
+  const visibleTaskCount = tasks.length > 0 ? tasks.length : phase.task_count;
+
   return (
     <article className="phase-card">
       <div className="phase-card-head">
@@ -1161,9 +1163,16 @@ function PhaseCard({
         <span className={`status-pill status-${phase.status}`}>{formatProjectPhaseStatus(phase.status)}</span>
       </div>
       <div className="detail-meta detail-meta-dense">
-        <span>{tasks.length} tarefa(s)</span>
+        <span>{visibleTaskCount} tarefa(s)</span>
         <span>{phase.started_at ? `Início ${formatDateOnly(phase.started_at)}` : "Não iniciada"}</span>
         <span>{phase.completed_at ? `Fim ${formatDateOnly(phase.completed_at)}` : "Em aberto"}</span>
+        <span>{phase.duration_days !== null ? `${phase.duration_days} dia(s)` : "Duração em aberto"}</span>
+      </div>
+      <div className="detail-meta detail-meta-dense">
+        <span>{phase.pending_task_count} pendente(s)</span>
+        <span>{phase.in_progress_task_count} em execução</span>
+        <span>{phase.blocked_task_count} bloqueada(s)</span>
+        <span>{phase.done_task_count} concluída(s)</span>
       </div>
       {phase.notes && <p className="phase-copy">{phase.notes}</p>}
       <ul className="phase-task-list">

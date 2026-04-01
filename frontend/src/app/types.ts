@@ -208,6 +208,12 @@ export interface ProjectPhaseItem {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  task_count: number;
+  pending_task_count: number;
+  in_progress_task_count: number;
+  blocked_task_count: number;
+  done_task_count: number;
+  duration_days: number | null;
 }
 
 export interface ProjectTaskItem {
