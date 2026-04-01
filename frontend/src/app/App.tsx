@@ -24,6 +24,7 @@ interface SessionState {
 interface NavItem {
   key: NavKey;
   label: string;
+  shortLabel: string;
   description: string;
 }
 
@@ -36,35 +37,35 @@ interface NavSection {
 const NAV_SECTIONS: NavSection[] = [
   {
     title: "Painel",
-    summary: "Leitura rápida da operação e atalhos de decisão.",
+    summary: "Acompanhamento executivo e leitura rápida da operação.",
     items: [
-      { key: "dashboard", label: "Visão geral", description: "Estado atual da plataforma e atalhos de trabalho." },
+      { key: "dashboard", label: "Visão geral", shortLabel: "VG", description: "Estado atual da plataforma e atalhos de trabalho." },
     ],
   },
   {
     title: "Fluxo comercial",
-    summary: "Da entrada ao avanço do relacionamento.",
+    summary: "Base do CRM, qualificação e negociação até o fechamento.",
     items: [
-      { key: "leads", label: "Leads", description: "Entrada e qualificação de demanda." },
-      { key: "opportunities", label: "Oportunidades", description: "Pipeline comercial e fechamento." },
-      { key: "companies", label: "Empresas", description: "Cadastro base do relacionamento comercial." },
-      { key: "contacts", label: "Contatos", description: "Pessoas vinculadas às contas." },
+      { key: "companies", label: "Empresas", shortLabel: "EM", description: "Contas e base relacional do CRM." },
+      { key: "contacts", label: "Contatos", shortLabel: "CT", description: "Pessoas vinculadas às contas e seus canais." },
+      { key: "leads", label: "Leads", shortLabel: "LD", description: "Entrada, qualificação e leitura comercial da demanda." },
+      { key: "opportunities", label: "Oportunidades", shortLabel: "OP", description: "Negociação, transição e fechamento comercial." },
     ],
   },
   {
     title: "Entrega",
-    summary: "Execução e acompanhamento do que foi vendido.",
+    summary: "Kickoff e execução operacional do que foi vendido.",
     items: [
-      { key: "projects", label: "Projetos", description: "Entrega operacional iniciada a partir do funil." },
+      { key: "projects", label: "Projetos", shortLabel: "PJ", description: "Entrega operacional iniciada a partir do funil." },
     ],
   },
   {
     title: "Governança",
-    summary: "Acesso, papéis e trilha operacional.",
+    summary: "Acesso, papéis e trilha de controle do sistema.",
     items: [
-      { key: "users", label: "Usuários", description: "Contas, acessos e vínculo de papéis." },
-      { key: "roles", label: "Papéis", description: "Permissões e controle de acesso." },
-      { key: "audit", label: "Auditoria", description: "Eventos sensíveis e trilha operacional." },
+      { key: "users", label: "Usuários", shortLabel: "US", description: "Contas, acessos e vínculo de papéis." },
+      { key: "roles", label: "Papéis", shortLabel: "PP", description: "Permissões e controle de acesso." },
+      { key: "audit", label: "Auditoria", shortLabel: "AU", description: "Eventos sensíveis e trilha operacional." },
     ],
   },
 ];
@@ -84,6 +85,7 @@ export function App() {
   });
   const [activeNav, setActiveNav] = useState<NavKey>(() => getNavFromHash(window.location.hash) || "dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const activeSection = NAV_SECTIONS.find((section) => section.items.some((item) => item.key === activeNav)) || null;
   const activeItem = NAV_SECTIONS.flatMap((section) => section.items).find((item) => item.key === activeNav);
 
   useEffect(() => {
@@ -161,6 +163,7 @@ export function App() {
           {!sidebarCollapsed && (
             <div className="brand-copy">
               <div className="brand-kicker">Optus Hub</div>
+              <small>Mesa operacional unificada</small>
             </div>
           )}
         </div>
@@ -191,9 +194,10 @@ export function App() {
                     className={item.key === activeNav ? "nav-item active" : "nav-item"}
                     aria-pressed={item.key === activeNav}
                     onClick={() => setActiveNav(item.key)}
+                    title={item.label}
                     type="button"
                   >
-                    <span>{item.label}</span>
+                    <span className="nav-item-label">{sidebarCollapsed ? item.shortLabel : item.label}</span>
                   </button>
                 ))}
               </div>
@@ -217,7 +221,10 @@ export function App() {
       <main className="main-content">
         <header className="topbar">
           <div>
-            <span className="eyebrow">Módulo ativo</span>
+            <span className="eyebrow topbar-kicker">
+              Optus Hub
+              {activeSection ? ` / ${activeSection.title}` : ""}
+            </span>
             <h2>{activeItem?.label}</h2>
             <p className="topbar-copy">{activeItem?.description}</p>
           </div>

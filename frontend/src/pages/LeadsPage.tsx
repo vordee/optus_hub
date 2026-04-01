@@ -40,6 +40,7 @@ export function LeadsPage() {
   );
   const safeContacts = ensureArray(contacts);
   const safeHistory = ensureArray(selectedDetail?.history);
+  const hasFilters = filterStatus.length > 0 || debouncedQuery.length > 0;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
@@ -92,15 +93,6 @@ export function LeadsPage() {
       status: item.status,
     });
     void loadDetail(item.id);
-  }
-
-  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: LeadItem) {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    event.preventDefault();
-    populate(item);
   }
 
   async function loadDetail(leadId: number) {
@@ -162,12 +154,19 @@ export function LeadsPage() {
   return (
     <section className="page-grid single">
       <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">CRM</span>
-          <h3>Leads</h3>
-          <p className="section-copy">
-            Resumo rápido no topo, cadastro logo em seguida e a tabela no final da página.
-          </p>
+        <div className="workspace-header">
+          <div className="section-heading">
+            <span className="eyebrow">CRM</span>
+            <h3>Leads</h3>
+            <p className="section-copy">
+              Entrada comercial em modo operacional: fila principal, contexto imediato e edição rápida sem trocar de tela.
+            </p>
+          </div>
+          <div className="workspace-actions">
+            <button className="primary-button" onClick={resetForm} type="button">
+              Novo lead
+            </button>
+          </div>
         </div>
         {error && <div className="inline-error">{error}</div>}
         <div className="crm-summary-grid compact-summary-grid">
@@ -194,60 +193,98 @@ export function LeadsPage() {
         </div>
       </article>
 
-      <article className="card">
-        <div className="stacked-card-sections">
-          <form className="form-card" onSubmit={handleSubmit}>
+      <section className="crm-console">
+        <article className="card crm-console-main">
+          <div className="workspace-header workspace-header-compact">
             <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Novo lead" : "Editar lead"}</h3>
+              <span className="eyebrow">Fila comercial</span>
+              <h3>Base ativa</h3>
             </div>
-            {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
-            <label className="field">
-              <span>Contato</span>
-              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
-                <option value="">Sem vínculo</option>
-                {safeContacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.full_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Título</span>
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Descrição</span>
-              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Origem</span>
-              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Status</span>
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-                {LEAD_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {formatLeadStatus(status)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                {selectedId === null ? "Criar lead" : "Atualizar lead"}
+            <div className="table-summary">
+              <span>{total} leads</span>
+              <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
+            </div>
+          </div>
+          <div className="toolbar">
+            <input
+              placeholder="Buscar por título ou origem"
+              value={query}
+              onChange={(event) => {
+                setPage(1);
+                setQuery(event.target.value);
+              }}
+            />
+            <select
+              value={filterStatus}
+              onChange={(event) => {
+                setPage(1);
+                setFilterStatus(event.target.value);
+              }}
+            >
+              <option value="">Todos os status</option>
+              {LEAD_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {formatLeadStatus(status)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="table-summary">
+            <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
+            <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
+            <span>{selectedId !== null ? `Lead ativo #${selectedId}` : "Nenhum lead ativo"}</span>
+          </div>
+          <div className="record-list">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                aria-pressed={selectedId === item.id}
+                className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
+                onClick={() => populate(item)}
+                type="button"
+              >
+                <div className="record-list-item-main">
+                  <div className="record-list-item-head">
+                    <strong>{item.title}</strong>
+                    <span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span>
+                  </div>
+                  <div className="record-list-item-meta">
+                    <span>{item.company_name || "Sem empresa"}</span>
+                    <span>{item.contact_name || "Sem contato"}</span>
+                    <span>{item.source || "Origem não informada"}</span>
+                  </div>
+                </div>
+                <div className="record-list-item-side">
+                  <small>Criado em</small>
+                  <span>{formatDateTime(item.created_at)}</span>
+                </div>
               </button>
-              {selectedId !== null && (
-                <button className="ghost-button" onClick={resetForm} type="button">
-                  Limpar edição
-                </button>
-              )}
+            ))}
+            {items.length === 0 && (
+              <div className="record-list-empty">
+                <strong>Nenhum lead encontrado</strong>
+                <p>Ajuste a busca ou o status para abrir outro recorte comercial.</p>
+              </div>
+            )}
+          </div>
+          <div className="pager">
+            <span>{total} registros</span>
+            <div className="pager-actions">
+              <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
+                Anterior
+              </button>
+              <span>Página {page}</span>
+              <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
+                Próxima
+              </button>
             </div>
-          </form>
-          {selectedDetail ? (
-            <div className="detail-panel detail-panel-standalone">
+          </div>
+        </article>
+
+        <aside className="card crm-console-side">
+          <div className="context-stack">
+            {selectedDetail ? (
+              <div className="detail-panel detail-panel-standalone">
               <div className="detail-hero">
                 <div className="detail-badges">
                   <span className={`status-pill status-${selectedDetail.status}`}>{formatLeadStatus(selectedDetail.status)}</span>
@@ -290,7 +327,7 @@ export function LeadsPage() {
                 </div>
               </div>
 
-              <div className="crm-context-grid">
+              <div className="crm-context-grid crm-context-grid-compact">
                 <div className="metric-card">
                   <span>Contato</span>
                   <strong>{selectedDetail.contact_name || "-"}</strong>
@@ -313,7 +350,7 @@ export function LeadsPage() {
                 </div>
               </div>
 
-              <div className="detail-section">
+              <div className="detail-section detail-section-compact">
                 <div className="section-heading">
                   <span className="eyebrow">Timeline</span>
                   <h3>Histórico do lead</h3>
@@ -328,89 +365,73 @@ export function LeadsPage() {
                   ))}
                 </ul>
               </div>
-            </div>
-          ) : (
-            <div className="empty-state-panel">
-              <strong>Selecione um lead na lista</strong>
-              <p>O painel do lead concentra contexto, leitura da etapa e histórico sem cair direto em edição.</p>
-            </div>
-          )}
-        </div>
-      </article>
+              </div>
+            ) : (
+              <div className="empty-state-panel">
+                <strong>Selecione um lead na fila</strong>
+                <p>O painel contextual mostra etapa, vínculo comercial e histórico antes de qualquer edição.</p>
+              </div>
+            )}
 
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Tabela</span>
-          <h3>Base de leads</h3>
-        </div>
-        <div className="toolbar">
-          <input
-            placeholder="Buscar por título ou origem"
-            value={query}
-            onChange={(event) => {
-              setPage(1);
-              setQuery(event.target.value);
-            }}
-          />
-          <select
-            value={filterStatus}
-            onChange={(event) => {
-              setPage(1);
-              setFilterStatus(event.target.value);
-            }}
-          >
-            <option value="">Todos os status</option>
-            {LEAD_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {formatLeadStatus(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="table-summary">
-          <span>{total} leads encontrados</span>
-          <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
-          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Empresa</th>
-                <th>Contato</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr
-                  key={item.id}
-                  aria-selected={selectedId === item.id}
-                  className={selectedId === item.id ? "selected-row" : ""}
-                  onClick={() => populate(item)}
-                  onKeyDown={(event) => handleRowKeyDown(event, item)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <td>{item.title}</td>
-                  <td>{item.company_name || "-"}</td>
-                  <td>{item.contact_name || "-"}</td>
-                  <td><span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="pager">
-          <span>{total} registros</span>
-          <div className="pager-actions">
-            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">Anterior</button>
-            <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">Próxima</button>
+            <form className="form-card compact-action-form" onSubmit={handleSubmit}>
+              <div className="workspace-header workspace-header-compact">
+                <div className="section-heading">
+                  <span className="eyebrow">Ação rápida</span>
+                  <h3>{selectedId === null ? "Cadastrar lead" : "Ajustar lead"}</h3>
+                </div>
+                {selectedId !== null && (
+                  <button className="ghost-button" onClick={resetForm} type="button">
+                    Novo
+                  </button>
+                )}
+              </div>
+              {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
+              <div className="task-form-grid task-form-grid-2">
+                <label className="field">
+                  <span>Contato</span>
+                  <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
+                    <option value="">Sem vínculo</option>
+                    {safeContacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Status</span>
+                  <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+                    {LEAD_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {formatLeadStatus(status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="field">
+                <span>Título</span>
+                <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+              </label>
+              <div className="task-form-grid task-form-grid-2">
+                <label className="field">
+                  <span>Origem</span>
+                  <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+                </label>
+                <label className="field">
+                  <span>Descrição curta</span>
+                  <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary-button" type="submit">
+                  {selectedId === null ? "Criar lead" : "Salvar ajustes"}
+                </button>
+              </div>
+            </form>
           </div>
-        </div>
-      </article>
+        </aside>
+      </section>
     </section>
   );
 }

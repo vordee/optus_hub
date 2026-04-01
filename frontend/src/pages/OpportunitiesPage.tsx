@@ -74,6 +74,7 @@ export function OpportunitiesPage() {
       items: items.filter((item) => item.status === status),
     }));
   }, [items]);
+  const hasFilters = filterStatus.length > 0 || debouncedQuery.length > 0;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
@@ -182,17 +183,9 @@ export function OpportunitiesPage() {
     }
   }
 
-  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: OpportunityItem) {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    event.preventDefault();
-    populate(item);
-  }
-
   function populate(item: OpportunityItem) {
     setSelectedId(item.id);
+    setDraftNotice(null);
     setForm({
       lead_id: item.lead_id ? String(item.lead_id) : "",
       title: item.title,
@@ -218,6 +211,20 @@ export function OpportunitiesPage() {
     }
   }
 
+  function resetForm() {
+    setSelectedId(null);
+    setSelectedDetail(null);
+    setDraftNotice(null);
+    setTransitionNote("");
+    setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
+    setKickoffForm({
+      project_name: "",
+      kickoff_owner_email: "",
+      kickoff_target_date: "",
+      kickoff_notes: "",
+    });
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -241,9 +248,7 @@ export function OpportunitiesPage() {
           body: JSON.stringify(payload),
         });
       }
-      setSelectedId(null);
-      setSelectedDetail(null);
-      setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
+      resetForm();
       await loadOpportunities();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar oportunidade.");
@@ -253,12 +258,19 @@ export function OpportunitiesPage() {
   return (
     <section className="page-grid single">
       <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">CRM</span>
-          <h3>Oportunidades</h3>
-          <p className="section-copy">
-            Resumo compacto primeiro, cadastro logo abaixo e a visualização comercial no final.
-          </p>
+        <div className="workspace-header">
+          <div className="section-heading">
+            <span className="eyebrow">CRM</span>
+            <h3>Oportunidades</h3>
+            <p className="section-copy">
+              Mesa comercial com leitura de estágio, transição guiada e ponte para kickoff sem trocar o foco da carteira.
+            </p>
+          </div>
+          <div className="workspace-actions">
+            <button className="primary-button" onClick={resetForm} type="button">
+              Nova oportunidade
+            </button>
+          </div>
         </div>
         {error && <div className="inline-error">{error}</div>}
         <div className="crm-summary-grid compact-summary-grid">
@@ -285,88 +297,170 @@ export function OpportunitiesPage() {
         </div>
       </article>
 
-      <article className="card">
-        <div className="stacked-card-sections">
-          <form className="form-card opportunity-form-shell" onSubmit={handleSubmit}>
+      <section className="crm-console crm-console-wide">
+        <article className="card crm-console-main">
+          <div className="workspace-header workspace-header-compact">
             <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Nova oportunidade" : "Editar oportunidade"}</h3>
-              <p className="section-copy">
-                Cadastro compacto para criação rápida e correção cadastral.
-              </p>
+              <span className="eyebrow">Carteira comercial</span>
+              <h3>Negócios em trabalho</h3>
             </div>
-            {draftNotice && <div className="inline-note">{draftNotice}</div>}
-            {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
-            <label className="field">
-              <span>Lead</span>
-              <select
-                value={form.lead_id}
-                onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
-              >
-                <option value="">Sem lead</option>
-                {safeLeads.map((lead) => (
-                  <option key={lead.id} value={lead.id}>
-                    {lead.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Título</span>
-              <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Descrição</span>
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-              />
-            </label>
-            <div className="task-form-grid task-form-grid-2">
-              <label className="field">
-                <span>Status</span>
-                <select
-                  value={form.status}
-                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-                >
-                  {OPPORTUNITY_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {formatOpportunityStatus(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Valor</span>
-                <input
-                  value={form.amount}
-                  onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                  type="number"
-                />
-              </label>
-            </div>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                {selectedId === null ? "Criar oportunidade" : "Atualizar oportunidade"}
-              </button>
-              {selectedId !== null && (
+            <div className="workspace-actions workspace-actions-tight">
+              <div className="table-summary">
+                <span>{total} oportunidades</span>
+                <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
+              </div>
+              <div className="panel-switcher panel-switcher-compact">
                 <button
-                  className="ghost-button"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedDetail(null);
-                    setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
-                  }}
+                  className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
+                  onClick={() => setListView("pipeline")}
                   type="button"
                 >
-                  Limpar edição
+                  Pipeline
                 </button>
+                <button
+                  className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
+                  onClick={() => setListView("lista")}
+                  type="button"
+                >
+                  Lista
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="toolbar">
+            <input
+              placeholder="Buscar por título"
+              value={query}
+              onChange={(event) => {
+                setPage(1);
+                setQuery(event.target.value);
+              }}
+            />
+            <select
+              value={filterStatus}
+              onChange={(event) => {
+                setPage(1);
+                setFilterStatus(event.target.value);
+              }}
+            >
+              <option value="">Todos os status</option>
+              {OPPORTUNITY_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {formatOpportunityStatus(status)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="status-board">
+            {OPPORTUNITY_STATUSES.map((status) => (
+              <button
+                key={status}
+                className={filterStatus === status ? "status-board-card active" : "status-board-card"}
+                onClick={() => {
+                  setPage(1);
+                  setFilterStatus((current) => (current === status ? "" : status));
+                }}
+                type="button"
+              >
+                <span>{formatOpportunityStatus(status)}</span>
+                <strong>{statusStats[status]}</strong>
+                <small>
+                  {status === "open" && "entrada e descoberta"}
+                  {status === "proposal" && "propostas em negociação"}
+                  {status === "won" && "negócios prontos para operação"}
+                  {status === "lost" && "oportunidades encerradas"}
+                </small>
+              </button>
+            ))}
+          </div>
+          <div className="table-summary">
+            <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
+            <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
+            <span>{selectedId !== null ? `Oportunidade ativa #${selectedId}` : "Nenhuma oportunidade ativa"}</span>
+          </div>
+          {listView === "pipeline" ? (
+            <div className="pipeline-grid">
+              {pipelineItems.map((column) => (
+                <article key={column.status} className="pipeline-column">
+                  <div className="pipeline-column-head">
+                    <div>
+                      <span className="eyebrow">Etapa</span>
+                      <h4>{formatOpportunityStatus(column.status)}</h4>
+                    </div>
+                    <span className="status-pill">{column.items.length}</span>
+                  </div>
+                  <div className="pipeline-stack">
+                    {column.items.map((item) => (
+                      <button
+                        key={item.id}
+                        className={selectedId === item.id ? "pipeline-card selected" : "pipeline-card"}
+                        onClick={() => populate(item)}
+                        type="button"
+                      >
+                        <strong>{item.title}</strong>
+                        <span>{item.company_name || "Sem empresa"}</span>
+                        <small>{item.contact_name || "Sem contato"}</small>
+                        <b>{formatCurrency(item.amount)}</b>
+                      </button>
+                    ))}
+                    {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="record-list">
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  aria-pressed={selectedId === item.id}
+                  className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
+                  onClick={() => populate(item)}
+                  type="button"
+                >
+                  <div className="record-list-item-main">
+                    <div className="record-list-item-head">
+                      <strong>{item.title}</strong>
+                      <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
+                    </div>
+                    <div className="record-list-item-meta">
+                      <span>{item.company_name || "Sem empresa"}</span>
+                      <span>{item.contact_name || "Sem contato"}</span>
+                      <span>{item.lead_id ? `Lead #${item.lead_id}` : "Sem lead"}</span>
+                    </div>
+                  </div>
+                  <div className="record-list-item-side">
+                    <small>Valor listado</small>
+                    <span>{formatCurrency(item.amount)}</span>
+                  </div>
+                </button>
+              ))}
+              {items.length === 0 && (
+                <div className="record-list-empty">
+                  <strong>Nenhuma oportunidade encontrada</strong>
+                  <p>Ajuste a busca ou o status para abrir outro recorte do pipeline.</p>
+                </div>
               )}
             </div>
-          </form>
+          )}
+          <div className="pager">
+            <span>{total} registros</span>
+            <div className="pager-actions">
+              <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
+                Anterior
+              </button>
+              <span>Página {page}</span>
+              <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
+                Próxima
+              </button>
+            </div>
+          </div>
+        </article>
 
-          {selectedDetail ? (
-            <div className="detail-panel detail-panel-standalone">
+        <aside className="card crm-console-side">
+          <div className="context-stack">
+            {selectedDetail ? (
+              <div className="detail-panel detail-panel-standalone">
               <div className="detail-hero">
                 <div className="detail-badges">
                   <span className={`status-pill status-${selectedDetail.status}`}>
@@ -405,7 +499,7 @@ export function OpportunitiesPage() {
                 </div>
               </div>
 
-              <div className="crm-context-grid">
+              <div className="crm-context-grid crm-context-grid-compact">
                 <div className="metric-card">
                   <span>Valor</span>
                   <strong>{formatCurrency(selectedDetail.amount)}</strong>
@@ -428,7 +522,7 @@ export function OpportunitiesPage() {
                 </div>
               </div>
 
-              <div className="detail-section">
+              <div className="detail-section detail-section-compact">
                 <div className="section-heading">
                   <span className="eyebrow">Kickoff</span>
                   <h3>Ponte para operação</h3>
@@ -502,7 +596,7 @@ export function OpportunitiesPage() {
                 </div>
               </div>
 
-              <div className="detail-section">
+              <div className="detail-section detail-section-compact">
                 <div className="section-heading">
                   <span className="eyebrow">Ações</span>
                   <h3>Fluxo comercial guiado</h3>
@@ -526,10 +620,10 @@ export function OpportunitiesPage() {
                       Ir para {formatOpportunityStatus(status)}
                     </button>
                   ))}
-                </div>
+                  </div>
               </div>
 
-              <div className="detail-section">
+              <div className="detail-section detail-section-compact">
                 <div className="section-heading">
                   <span className="eyebrow">Timeline</span>
                   <h3>Histórico comercial</h3>
@@ -546,165 +640,87 @@ export function OpportunitiesPage() {
                   ))}
                 </ul>
               </div>
-            </div>
-          ) : (
-            <div className="empty-state-panel">
-              <strong>Selecione uma oportunidade na lista</strong>
-              <p>O painel comercial mostra histórico, próximas transições e ponte para kickoff sem misturar isso com o formulário.</p>
-            </div>
-          )}
-        </div>
-      </article>
+              </div>
+            ) : (
+              <div className="empty-state-panel">
+                <strong>Selecione uma oportunidade</strong>
+                <p>O painel lateral concentra leitura do negócio, transições e ponte para projeto sem misturar tudo na carteira.</p>
+              </div>
+            )}
 
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Tabela</span>
-          <h3>Carteira comercial</h3>
-        </div>
-        <div className="toolbar">
-          <input
-            placeholder="Buscar por título"
-            value={query}
-            onChange={(event) => {
-              setPage(1);
-              setQuery(event.target.value);
-            }}
-          />
-          <select
-            value={filterStatus}
-            onChange={(event) => {
-              setPage(1);
-              setFilterStatus(event.target.value);
-            }}
-          >
-            <option value="">Todos os status</option>
-            {OPPORTUNITY_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {formatOpportunityStatus(status)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="status-board">
-          {OPPORTUNITY_STATUSES.map((status) => (
-            <button
-              key={status}
-              className={filterStatus === status ? "status-board-card active" : "status-board-card"}
-              onClick={() => {
-                setPage(1);
-                setFilterStatus((current) => (current === status ? "" : status));
-              }}
-              type="button"
-            >
-              <span>{formatOpportunityStatus(status)}</span>
-              <strong>{statusStats[status]}</strong>
-              <small>
-                {status === "open" && "entrada e descoberta"}
-                {status === "proposal" && "propostas em negociação"}
-                {status === "won" && "negócios prontos para operação"}
-                {status === "lost" && "oportunidades encerradas"}
-              </small>
-            </button>
-          ))}
-        </div>
-        <div className="table-summary">
-          <span>{total} oportunidades encontradas</span>
-          <span>{filterStatus ? `Filtro: ${formatOpportunityStatus(filterStatus)}` : "Todos os status"}</span>
-          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-        </div>
-        <div className="panel-switcher">
-          <button
-            className={listView === "pipeline" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setListView("pipeline")}
-            type="button"
-          >
-            Pipeline
-          </button>
-          <button
-            className={listView === "lista" ? "ghost-button active-toggle" : "ghost-button"}
-            onClick={() => setListView("lista")}
-            type="button"
-          >
-            Lista
-          </button>
-        </div>
-        {listView === "pipeline" ? (
-          <div className="pipeline-grid">
-            {pipelineItems.map((column) => (
-              <article key={column.status} className="pipeline-column">
-                <div className="pipeline-column-head">
-                  <div>
-                    <span className="eyebrow">Etapa</span>
-                    <h4>{formatOpportunityStatus(column.status)}</h4>
-                  </div>
-                  <span className="status-pill">{column.items.length}</span>
+            <form className="form-card compact-action-form opportunity-form-shell" onSubmit={handleSubmit}>
+              <div className="workspace-header workspace-header-compact">
+                <div className="section-heading">
+                  <span className="eyebrow">Ação rápida</span>
+                  <h3>{selectedId === null ? "Cadastrar oportunidade" : "Ajustar oportunidade"}</h3>
                 </div>
-                <div className="pipeline-stack">
-                  {column.items.map((item) => (
-                    <button
-                      key={item.id}
-                      className={selectedId === item.id ? "pipeline-card selected" : "pipeline-card"}
-                      onClick={() => populate(item)}
-                      type="button"
-                    >
-                      <strong>{item.title}</strong>
-                      <span>{item.company_name || "Sem empresa"}</span>
-                      <small>{item.contact_name || "Sem contato"}</small>
-                      <b>{formatCurrency(item.amount)}</b>
-                    </button>
-                  ))}
-                  {column.items.length === 0 && <div className="pipeline-empty">Sem oportunidades nesta etapa.</div>}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Empresa</th>
-                  <th>Status</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    aria-selected={selectedId === item.id}
-                    className={selectedId === item.id ? "selected-row" : ""}
-                    onClick={() => populate(item)}
-                    onKeyDown={(event) => handleRowKeyDown(event, item)}
-                    role="button"
-                    tabIndex={0}
+                {selectedId !== null && (
+                  <button className="ghost-button" onClick={resetForm} type="button">
+                    Novo
+                  </button>
+                )}
+              </div>
+              {draftNotice && <div className="inline-note">{draftNotice}</div>}
+              {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
+              <div className="task-form-grid task-form-grid-2">
+                <label className="field">
+                  <span>Lead</span>
+                  <select
+                    value={form.lead_id}
+                    onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
                   >
-                    <td>{item.title}</td>
-                    <td>{item.company_name || "-"}</td>
-                    <td>
-                      <span className={`status-pill status-${item.status}`}>{formatOpportunityStatus(item.status)}</span>
-                    </td>
-                    <td>{formatCurrency(item.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <option value="">Sem lead</option>
+                    {safeLeads.map((lead) => (
+                      <option key={lead.id} value={lead.id}>
+                        {lead.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Status</span>
+                  <select
+                    value={form.status}
+                    onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+                  >
+                    {OPPORTUNITY_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {formatOpportunityStatus(status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="field">
+                <span>Título</span>
+                <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+              </label>
+              <div className="task-form-grid task-form-grid-2">
+                <label className="field">
+                  <span>Valor</span>
+                  <input
+                    value={form.amount}
+                    onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                    type="number"
+                  />
+                </label>
+                <label className="field">
+                  <span>Descrição curta</span>
+                  <input
+                    value={form.description}
+                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button className="primary-button" type="submit">
+                  {selectedId === null ? "Criar oportunidade" : "Salvar ajustes"}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-        <div className="pager">
-          <span>{total} registros</span>
-          <div className="pager-actions">
-            <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
-              Anterior
-            </button>
-            <span>Página {page}</span>
-            <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
-              Próxima
-            </button>
-          </div>
-        </div>
-      </article>
+        </aside>
+      </section>
     </section>
   );
 }
