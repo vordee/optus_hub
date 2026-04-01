@@ -1,6 +1,6 @@
 # Runtime Current State
 
-Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `3fac6e6`.
+Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `c357ece`.
 
 Use este arquivo como fonte de verdade operacional para humanos e agentes antes de qualquer novo deploy, troubleshooting ou continuidade de implementacao.
 
@@ -22,7 +22,7 @@ Existem dois caminhos diferentes para frontend e isso precisa continuar explicit
 
 No estado atual, `/var/www/optus-hub/frontend` e um link simbolico para o release ativo:
 
-- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-3fac6e6-20260401114139`
+- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-c357ece-20260401124211`
 
 ## Nginx
 
@@ -123,10 +123,10 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 
 ## Estado publicado nesta entrega
 
-- commit publicado: `3fac6e6`
-- release ativo: `/var/www/optus-hub/releases/frontend-3fac6e6-20260401114139`
+- commit publicado: `c357ece`
+- release ativo: `/var/www/optus-hub/releases/frontend-c357ece-20260401124211`
 - assets servidos apos publicacao:
-  - `index-DchCKeFl.js`
+  - `index-zoOPDklv.js`
   - `index-CH2S46ni.css`
 
 ## Validacao operacional desta entrega
