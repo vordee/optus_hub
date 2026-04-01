@@ -1,6 +1,6 @@
 # Runtime Current State
 
-Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `ba44cc4`.
+Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `d5fdc9b`.
 
 Use este arquivo como fonte de verdade operacional para humanos e agentes antes de qualquer novo deploy, troubleshooting ou continuidade de implementacao.
 
@@ -22,7 +22,7 @@ Existem dois caminhos diferentes para frontend e isso precisa continuar explicit
 
 No estado atual, `/var/www/optus-hub/frontend` e um link simbolico para o release ativo:
 
-- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-ba44cc4-20260401110048`
+- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-d5fdc9b-20260401111457`
 
 ## Nginx
 
@@ -123,11 +123,11 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 
 ## Estado publicado nesta entrega
 
-- commit publicado: `ba44cc4`
-- release ativo: `/var/www/optus-hub/releases/frontend-ba44cc4-20260401110048`
+- commit publicado: `d5fdc9b`
+- release ativo: `/var/www/optus-hub/releases/frontend-d5fdc9b-20260401111457`
 - assets servidos apos publicacao:
-  - `index-B6K9Ci1R.js`
-  - `index-CQCZWrw5.css`
+  - `index-DKif23-U.js`
+  - `index-hkhM3qCy.css`
 
 ## Regra para continuidade por agentes
 
