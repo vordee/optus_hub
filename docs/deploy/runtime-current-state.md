@@ -1,6 +1,6 @@
 # Runtime Current State
 
-Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `c357ece`.
+Documento de referencia do ambiente real em `10.222.222.33` na data de publicacao do commit `60fbb8f`.
 
 Use este arquivo como fonte de verdade operacional para humanos e agentes antes de qualquer novo deploy, troubleshooting ou continuidade de implementacao.
 
@@ -22,7 +22,7 @@ Existem dois caminhos diferentes para frontend e isso precisa continuar explicit
 
 No estado atual, `/var/www/optus-hub/frontend` e um link simbolico para o release ativo:
 
-- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-c357ece-20260401124211`
+- release ativo no momento desta documentacao: `/var/www/optus-hub/releases/frontend-60fbb8f-20260401164830`
 
 ## Nginx
 
@@ -44,7 +44,7 @@ Implicacao pratica:
 - API: `optus-hub-api`
 - comando observado: `/opt/optus_hub/backend/.venv/bin/python3.11 -m uvicorn app.main:app --host 127.0.0.1 --port 8000`
 - status no momento da coleta: `active (running)`
-- codigo de backend publicado manualmente ate o commit: `02b13e2`
+- codigo de backend publicado manualmente ate o commit: `60fbb8f`
 
 ## Versões observadas no servidor
 
@@ -124,26 +124,26 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 
 ## Estado publicado nesta entrega
 
-- commit publicado: `c357ece`
-- release ativo: `/var/www/optus-hub/releases/frontend-c357ece-20260401124211`
+- commit publicado: `60fbb8f`
+- release ativo: `/var/www/optus-hub/releases/frontend-60fbb8f-20260401164830`
 - assets servidos apos publicacao:
-  - `index-zoOPDklv.js`
-  - `index-CH2S46ni.css`
+  - `index-X1o8MMYO.js`
+  - `index-CRV7cCAb.css`
 
 ## Estado da API publicado nesta entrega
 
-- commit de backend publicado: `02b13e2`
-- endpoint read-only inicial exposto em: `GET /api/v1/integrations/bling/read-only`
+- commit de backend publicado: `60fbb8f`
+- endpoint novo exposto em: `GET /api/v1/crm/activities`
+- endpoint read-only inicial mantido em: `GET /api/v1/integrations/bling/read-only`
 - validacao observada no servidor:
   - `GET /api/v1/health` respondeu `{"status":"ok","database":"up"}`
-  - `GET /api/v1/integrations/bling/read-only?module=contacts` respondeu `503` com `Bling integration is disabled.`
+  - frontend HTTPS serviu `index-X1o8MMYO.js` e `index-CRV7cCAb.css`
 
-## Observacao sobre a rodada de planejamento
+## Observacao sobre o roadmap
 
 - o commit `fdaa6dd` documenta o roadmap de execucao do CRM
-- essa rodada nao alterou o runtime publicado no servidor
-- frontend ativo continua no release `frontend-c357ece-20260401124211`
-- backend publicado continua no commit `02b13e2`
+- a Fase 1 do roadmap entrou em runtime no commit `60fbb8f`
+- o ERP continua externo e apenas via API
 
 ## Validacao operacional desta entrega
 
