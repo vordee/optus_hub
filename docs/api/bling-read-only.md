@@ -36,3 +36,22 @@ Consumir dados de referencia do ERP sem deixar o workflow do Optus Hub dependent
 - `python -m app.jobs.bling_hourly_sync`
 
 Esse job executa apenas consulta e imprime um resumo do snapshot obtido.
+
+## Endpoint inicial
+
+- `GET /api/v1/integrations/bling/read-only`
+
+Query params:
+
+- `module`: `contacts`, `products`, `sales_orders`, `invoices`
+- `page`: padrao `1`
+- `page_size`: padrao `100`, maximo `200`
+- `since`: cursor temporal opcional em formato ISO-8601
+
+Comportamento:
+
+- autenticado
+- somente leitura
+- retorna `503` quando `BLING_ENABLED=false`
+- usa `since` como `dataAlteracaoInicial` para contatos, produtos e pedidos
+- usa `since` como `dataEmissaoInicial` para notas fiscais
