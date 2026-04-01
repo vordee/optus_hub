@@ -776,6 +776,10 @@ tbody tr.selected-row {
   place-items: center;
 }
 
+.crash-card {
+  width: min(520px, calc(100vw - 32px));
+}
+
 .login-layout {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;

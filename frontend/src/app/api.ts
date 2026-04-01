@@ -12,6 +12,18 @@ export class ApiError extends Error {
   }
 }
 
+function parseResponseBody(bodyText: string): unknown {
+  if (!bodyText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(bodyText);
+  } catch {
+    return bodyText;
+  }
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Content-Type", "application/json");
@@ -31,13 +43,17 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
 
   const bodyText = await response.text();
-  const data = bodyText ? JSON.parse(bodyText) : null;
+  const data = parseResponseBody(bodyText) as { detail?: string } | string | null;
 
   if (!response.ok) {
     if (response.status === 401) {
       clearToken();
+      throw new ApiError("Sessão expirada. Entre novamente.", response.status);
     }
-    throw new ApiError(data?.detail ?? "Request failed.", response.status);
+    if (typeof data === "string") {
+      throw new ApiError(data || "Falha na requisição.", response.status);
+    }
+    throw new ApiError(data?.detail ?? "Falha na requisição.", response.status);
   }
 
   return data as T;
