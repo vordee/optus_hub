@@ -44,6 +44,7 @@ Implicacao pratica:
 - API: `optus-hub-api`
 - comando observado: `/opt/optus_hub/backend/.venv/bin/python3.11 -m uvicorn app.main:app --host 127.0.0.1 --port 8000`
 - status no momento da coleta: `active (running)`
+- codigo de backend publicado manualmente ate o commit: `02b13e2`
 
 ## Versões observadas no servidor
 
@@ -128,6 +129,14 @@ Confirme se os nomes de assets servidos batem com o `dist` gerado.
 - assets servidos apos publicacao:
   - `index-zoOPDklv.js`
   - `index-CH2S46ni.css`
+
+## Estado da API publicado nesta entrega
+
+- commit de backend publicado: `02b13e2`
+- endpoint read-only inicial exposto em: `GET /api/v1/integrations/bling/read-only`
+- validacao observada no servidor:
+  - `GET /api/v1/health` respondeu `{"status":"ok","database":"up"}`
+  - `GET /api/v1/integrations/bling/read-only?module=contacts` respondeu `503` com `Bling integration is disabled.`
 
 ## Validacao operacional desta entrega
 
