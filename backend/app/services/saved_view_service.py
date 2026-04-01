@@ -28,21 +28,24 @@ class SavedViewService:
         self.db = db
         self.repository = SavedViewRepository(db)
 
-    def list_views(self, module: str | None = None) -> list[SavedView]:
+    def list_views(self, module: str | None = None, *, created_by_email: str | None = None) -> list[SavedView]:
         if module is None:
             return sorted(
-                self.repository.list_by_module(module="leads") + self.repository.list_by_module(module="opportunities"),
+                self.repository.list_by_module(module="leads", created_by_email=created_by_email)
+                + self.repository.list_by_module(module="opportunities", created_by_email=created_by_email),
                 key=lambda item: (item.module, not item.is_default, item.name.lower(), item.id),
             )
         normalized_module = self._validate_module(module)
-        return self.repository.list_by_module(module=normalized_module)
+        return self.repository.list_by_module(module=normalized_module, created_by_email=created_by_email)
 
-    def get_view(self, view_id: int, *, module: str | None = None) -> SavedView:
+    def get_view(self, view_id: int, *, module: str | None = None, created_by_email: str | None = None) -> SavedView:
         view = self.repository.get_by_id(view_id)
         if view is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved view not found.")
         if module is not None and view.module != self._validate_module(module):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Saved view module mismatch.")
+        if created_by_email != view.created_by_email:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved view not found.")
         return view
 
     def create_view(self, payload: SavedViewCreateRequest, *, created_by_email: str | None = None) -> SavedView:
@@ -67,7 +70,7 @@ class SavedViewService:
             created_by_email=created_by_email,
         )
         if view.is_default:
-            self._clear_other_defaults(module=module, excluded_view_id=view.id)
+            self._clear_other_defaults(module=module, created_by_email=created_by_email, excluded_view_id=view.id)
         return self.repository.save(view)
 
     def update_view(
@@ -77,7 +80,7 @@ class SavedViewService:
         *,
         updated_by_email: str | None = None,
     ) -> SavedView:
-        view = self.get_view(view_id)
+        view = self.get_view(view_id, created_by_email=updated_by_email)
         next_module = self._validate_module(payload.module) if payload.module is not None else view.module
         next_name = payload.name if payload.name is not None else view.name
         next_filters = payload.filters_json if payload.filters_json is not None else view.filters_json
@@ -105,15 +108,15 @@ class SavedViewService:
         view.is_default = normalized["is_default"]
         view.updated_by_email = updated_by_email
         if view.is_default:
-            self._clear_other_defaults(module=view.module, excluded_view_id=view.id)
+            self._clear_other_defaults(module=view.module, created_by_email=view.created_by_email, excluded_view_id=view.id)
         return self.repository.save(view)
 
-    def delete_view(self, view_id: int) -> None:
-        view = self.get_view(view_id)
+    def delete_view(self, view_id: int, *, created_by_email: str | None = None) -> None:
+        view = self.get_view(view_id, created_by_email=created_by_email)
         self.repository.delete(view)
 
-    def _clear_other_defaults(self, *, module: str, excluded_view_id: int | None) -> None:
-        for view in self.repository.list_by_module(module=module):
+    def _clear_other_defaults(self, *, module: str, created_by_email: str | None, excluded_view_id: int | None) -> None:
+        for view in self.repository.list_by_module(module=module, created_by_email=created_by_email):
             if excluded_view_id is not None and view.id == excluded_view_id:
                 continue
             if view.is_default:

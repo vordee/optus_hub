@@ -12,12 +12,13 @@ class SavedViewRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_by_module(self, *, module: str) -> list[SavedView]:
-        stmt = (
-            select(SavedView)
-            .where(SavedView.module == module)
-            .order_by(SavedView.is_default.desc(), SavedView.name.asc(), SavedView.id.asc())
-        )
+    def list_by_module(self, *, module: str, created_by_email: str | None = None) -> list[SavedView]:
+        stmt = select(SavedView).where(SavedView.module == module)
+        if created_by_email is None:
+            stmt = stmt.where(SavedView.created_by_email.is_(None))
+        else:
+            stmt = stmt.where(SavedView.created_by_email == created_by_email)
+        stmt = stmt.order_by(SavedView.is_default.desc(), SavedView.name.asc(), SavedView.id.asc())
         return list(self.db.execute(stmt).scalars().all())
 
     def get_by_id(self, view_id: int) -> Optional[SavedView]:

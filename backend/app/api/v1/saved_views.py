@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from app.api.deps import get_current_user_email, require_any_permission
 from app.core.database import SessionLocal
@@ -27,16 +27,19 @@ def serialize_saved_view(view) -> SavedViewResponse:
 
 
 @router.get("/saved-views", response_model=list[SavedViewResponse], dependencies=[Depends(require_any_permission("leads:read", "opportunities:read"))])
-def list_saved_views(module: str | None = None) -> list[SavedViewResponse]:
+def list_saved_views(
+    module: str | None = Query(default=None),
+    current_user_email: str = Depends(get_current_user_email),
+) -> list[SavedViewResponse]:
     with SessionLocal() as db:
-        items = SavedViewService(db).list_views(module=module)
+        items = SavedViewService(db).list_views(module=module, created_by_email=current_user_email)
         return [serialize_saved_view(item) for item in items]
 
 
 @router.get("/saved-views/{view_id}", response_model=SavedViewResponse, dependencies=[Depends(require_any_permission("leads:read", "opportunities:read"))])
-def get_saved_view(view_id: int) -> SavedViewResponse:
+def get_saved_view(view_id: int, current_user_email: str = Depends(get_current_user_email)) -> SavedViewResponse:
     with SessionLocal() as db:
-        view = SavedViewService(db).get_view(view_id)
+        view = SavedViewService(db).get_view(view_id, created_by_email=current_user_email)
         return serialize_saved_view(view)
 
 
@@ -83,16 +86,20 @@ def update_saved_view(
         return serialize_saved_view(view)
 
 
-@router.delete("/saved-views/{view_id}", dependencies=[Depends(require_any_permission("leads:write", "opportunities:write"))])
+@router.delete(
+    "/saved-views/{view_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_any_permission("leads:write", "opportunities:write"))],
+)
 def delete_saved_view(
     view_id: int,
     request: Request,
     current_user_email: str = Depends(get_current_user_email),
-) -> dict[str, str]:
+) -> Response:
     with SessionLocal() as db:
         service = SavedViewService(db)
-        view = service.get_view(view_id)
-        service.delete_view(view_id)
+        view = service.get_view(view_id, created_by_email=current_user_email)
+        service.delete_view(view_id, created_by_email=current_user_email)
         AuditService(db).record_event(
             action="crm.saved_view.delete",
             status="success",
@@ -103,4 +110,4 @@ def delete_saved_view(
             user_agent=request.headers.get("user-agent"),
             details={"module": view.module, "name": view.name},
         )
-        return {"status": "deleted"}
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
