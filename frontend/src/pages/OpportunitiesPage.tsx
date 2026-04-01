@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { consumeOpportunityDraft } from "../app/crmDrafts";
+import { ActivityPanel } from "../app/ActivityPanel";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
@@ -681,6 +682,13 @@ export function OpportunitiesPage() {
                   ))}
                 </ul>
               </div>
+              <ActivityPanel
+                contextLabel="Atividades da oportunidade para negociação, follow-up e preparo do próximo passo."
+                emptyMessage="Nenhuma atividade registrada para esta oportunidade."
+                entityId={selectedDetail.id}
+                entityType="opportunity"
+                title="Atividades da oportunidade"
+              />
               </div>
             ) : (
               <div className="empty-state-panel">

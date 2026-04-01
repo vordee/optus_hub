@@ -14,7 +14,8 @@ export type AppIconName =
   | "add"
   | "spark"
   | "edit"
-  | "close";
+  | "close"
+  | "check";
 
 export function AppIcon({ name }: { name: AppIconName }) {
   const commonProps = {
@@ -61,5 +62,7 @@ export function AppIcon({ name }: { name: AppIconName }) {
       return <svg {...commonProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
     case "close":
       return <svg {...commonProps}><path d="m18 6-12 12" /><path d="m6 6 12 12" /></svg>;
+    case "check":
+      return <svg {...commonProps}><path d="m5 13 4 4L19 7" /></svg>;
   }
 }

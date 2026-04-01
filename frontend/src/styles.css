@@ -845,6 +845,82 @@ tbody tr[role="button"]:focus-visible td {
   margin-top: 14px;
 }
 
+.activity-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.activity-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.activity-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.activity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.activity-card.done {
+  opacity: 0.82;
+}
+
+.activity-card-main {
+  display: grid;
+  gap: 8px;
+}
+
+.activity-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.activity-kind {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.activity-note {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.activity-actions .ghost-button {
+  padding: 9px 12px;
+  border-radius: 12px;
+}
+
+.overdue-note {
+  border-left: 4px solid #b45309;
+}
+
 .panel-switcher {
   display: flex;
   gap: 10px;
@@ -1507,6 +1583,14 @@ tbody tr[role="button"]:focus-visible td {
   background: rgba(17, 19, 23, 0.12);
 }
 
+.status-pill.status-pending {
+  background: rgba(31, 90, 145, 0.12);
+}
+
+.status-pill.status-canceled {
+  background: rgba(17, 19, 23, 0.08);
+}
+
 .status-pill.status-task-pending {
   background: rgba(31, 90, 145, 0.12);
 }
@@ -1562,6 +1646,7 @@ tbody tr[role="button"]:focus-visible td {
 
   .crm-summary-grid,
   .crm-context-grid,
+  .activity-summary-grid,
   .status-board,
   .pipeline-grid,
   .record-action-bar,
@@ -1589,6 +1674,15 @@ tbody tr[role="button"]:focus-visible td {
   .workspace-stat-chip-wide {
     min-width: 0;
     flex: 1 1 calc(50% - 8px);
+  }
+
+  .activity-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .activity-actions {
+    flex-direction: column;
   }
 
   .quick-form-modal-backdrop {
@@ -1627,6 +1721,7 @@ tbody tr[role="button"]:focus-visible td {
 
   .crm-summary-grid,
   .crm-context-grid,
+  .activity-summary-grid,
   .status-board,
   .pipeline-grid,
   .record-action-bar,

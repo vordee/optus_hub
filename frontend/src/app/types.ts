@@ -113,6 +113,25 @@ export interface LeadItem {
   created_at: string;
 }
 
+export type CRMActivityEntityType = "lead" | "opportunity";
+export type CRMActivityType = "call" | "email" | "meeting" | "task" | "follow_up";
+export type CRMActivityStatus = "pending" | "done" | "canceled";
+
+export interface CRMActivityItem {
+  id: number;
+  entity_type: CRMActivityEntityType;
+  entity_id: number;
+  activity_type: CRMActivityType;
+  title: string;
+  note: string | null;
+  due_at: string | null;
+  status: CRMActivityStatus;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by_email: string | null;
+}
+
 export interface LeadListResponse {
   items: LeadItem[];
   total: number;
@@ -133,6 +152,9 @@ export interface StatusHistoryItem {
 
 export interface LeadDetailItem extends LeadItem {
   history: StatusHistoryItem[];
+  activities?: CRMActivityItem[];
+  next_activity?: CRMActivityItem | null;
+  overdue_activity_count?: number;
 }
 
 export interface OpportunityItem {
@@ -159,6 +181,9 @@ export interface OpportunityListResponse {
 export interface OpportunityDetailItem extends OpportunityItem {
   next_statuses: string[];
   history: StatusHistoryItem[];
+  activities?: CRMActivityItem[];
+  next_activity?: CRMActivityItem | null;
+  overdue_activity_count?: number;
   linked_project: {
     id: number;
     name: string;

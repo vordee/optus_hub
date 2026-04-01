@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { storeOpportunityDraftFromLead } from "../app/crmDrafts";
+import { ActivityPanel } from "../app/ActivityPanel";
 import { formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
@@ -392,6 +393,13 @@ export function LeadsPage() {
                   ))}
                 </ul>
               </div>
+              <ActivityPanel
+                contextLabel="Atividade do lead para qualificar, retomar ou avançar sem sair do painel."
+                emptyMessage="Nenhuma atividade registrada para este lead."
+                entityId={selectedDetail.id}
+                entityType="lead"
+                title="Atividades do lead"
+              />
               </div>
             ) : (
               <div className="empty-state-panel">
