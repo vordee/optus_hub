@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -12,6 +12,9 @@ from app.core.time import local_now
 
 class StatusHistory(Base):
     __tablename__ = "status_history"
+    __table_args__ = (
+        Index("ix_status_history_entity_changed_at_id", "entity_type", "entity_id", "changed_at", "id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)

@@ -378,6 +378,14 @@ tbody tr.selected-row {
   margin-bottom: 16px;
 }
 
+.contacts-toolbar {
+  flex-wrap: wrap;
+}
+
+.contacts-toolbar .primary-button {
+  white-space: nowrap;
+}
+
 .status-board {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -480,6 +488,58 @@ tbody tr.selected-row {
 }
 
 .project-metrics .metric-card small {
+  color: var(--text-soft);
+}
+
+.dashboard-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-session-card {
+  margin-top: 18px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.dashboard-section {
+  margin-top: 18px;
+}
+
+.mini-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.mini-list-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.mini-list-item p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+}
+
+.mini-list-empty {
+  padding: 10px 2px;
   color: var(--text-soft);
 }
 

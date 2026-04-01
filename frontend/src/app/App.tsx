@@ -160,7 +160,7 @@ export function App() {
           <div className="permission-pill">{safeRoles.join(", ") || "sem papel"}</div>
         </header>
 
-        {activeNav === "dashboard" && <DashboardPage />}
+        {activeNav === "dashboard" && <DashboardPage currentUser={session.user} />}
         {activeNav === "users" && <UsersPage />}
         {activeNav === "roles" && <RolesPage />}
         {activeNav === "audit" && <AuditPage />}

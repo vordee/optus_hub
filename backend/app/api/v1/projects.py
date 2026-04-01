@@ -85,10 +85,10 @@ def list_projects(
 def get_project(project_id: int) -> ProjectDetailResponse:
     with SessionLocal() as db:
         service = ProjectService(db)
-        project = service.get_project(project_id)
+        project = service.get_project_detail(project_id)
         return ProjectDetailResponse(
             **serialize_project(project).model_dump(),
-            phases=[serialize_project_phase(item) for item in service.list_phases(project_id)],
+            phases=[serialize_project_phase(item) for item in project.phases],
             history=[serialize_status_history(item) for item in service.list_status_history(project_id)],
         )
 

@@ -4,43 +4,23 @@ import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatLeadStatus, formatProjectStatus } from "../app/labels";
-import type {
-  AuditEventItem,
-  CompanyItem,
-  ContactItem,
-  LeadItem,
-  OpportunityListResponse,
-  ProjectListResponse,
-  UserItem,
-} from "../app/types";
+import type { AuthenticatedUser, DashboardSummaryResponse } from "../app/types";
 
 interface DashboardState {
   loading: boolean;
   error: string | null;
-  users: UserItem[];
-  auditEvents: AuditEventItem[];
-  companies: CompanyItem[];
-  contacts: ContactItem[];
-  leads: LeadItem[];
-  opportunityCount: number;
-  projectCount: number;
-  recentOpportunities: Array<{ id: number; title: string; status: string; created_at: string }>;
-  recentProjects: Array<{ id: number; name: string; status: string; created_at: string }>;
+  summary: DashboardSummaryResponse | null;
 }
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  currentUser: AuthenticatedUser;
+}
+
+export function DashboardPage({ currentUser }: DashboardPageProps) {
   const [state, setState] = useState<DashboardState>({
     loading: true,
     error: null,
-    users: [],
-    auditEvents: [],
-    companies: [],
-    contacts: [],
-    leads: [],
-    opportunityCount: 0,
-    projectCount: 0,
-    recentOpportunities: [],
-    recentProjects: [],
+    summary: null,
   });
 
   useEffect(() => {
@@ -49,38 +29,11 @@ export function DashboardPage() {
 
   async function load() {
     try {
-      const [users, auditEvents, companies, contacts, leads, opportunityResponse, projectResponse] = await Promise.all([
-        apiRequest<UserItem[]>("/v1/admin/users"),
-        apiRequest<AuditEventItem[]>("/v1/admin/audit-events?limit=8"),
-        apiRequest<CompanyItem[]>("/v1/crm/companies"),
-        apiRequest<ContactItem[]>("/v1/crm/contacts"),
-        apiRequest<LeadItem[]>("/v1/crm/leads"),
-        apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=8"),
-        apiRequest<ProjectListResponse>("/v1/projects?page=1&page_size=8"),
-      ]);
-
+      const summary = await apiRequest<DashboardSummaryResponse>("/v1/dashboard/summary");
       setState({
         loading: false,
         error: null,
-        users: ensureArray(users),
-        auditEvents: ensureArray(auditEvents),
-        companies: ensureArray(companies),
-        contacts: ensureArray(contacts),
-        leads: ensureArray(leads),
-        opportunityCount: opportunityResponse.total,
-        projectCount: projectResponse.total,
-        recentOpportunities: ensureArray(opportunityResponse.items).map((item) => ({
-          id: item.id,
-          title: item.title,
-          status: item.status,
-          created_at: item.created_at,
-        })),
-        recentProjects: ensureArray(projectResponse.items).map((item) => ({
-          id: item.id,
-          name: item.name,
-          status: item.status,
-          created_at: item.created_at,
-        })),
+        summary,
       });
     } catch (loadError) {
       setState((current) => ({
@@ -91,12 +44,11 @@ export function DashboardPage() {
     }
   }
 
-  const activeCompanies = state.companies.filter((item) => item.is_active).length;
-  const activeContacts = state.contacts.filter((item) => item.is_active).length;
-  const wonOpportunities = state.recentOpportunities.filter((item) => item.status === "won").length;
-  const activeProjects = state.recentProjects.filter((item) => item.status === "active").length;
-  const recentContacts = state.contacts.slice(0, 3);
-  const recentLeads = state.leads.slice(0, 3);
+  const summary = state.summary;
+  const recentContacts = ensureArray(summary?.recent_contacts);
+  const recentLeads = ensureArray(summary?.recent_leads);
+  const recentProjects = ensureArray(summary?.recent_projects);
+  const recentAuditEvents = ensureArray(summary?.recent_audit_events);
 
   return (
     <section className="dashboard-shell">
@@ -115,25 +67,36 @@ export function DashboardPage() {
 
         <div className="metric-grid dashboard-metrics">
           <div className="metric-card">
-            <span>Admin</span>
-            <strong>{state.users.length}</strong>
-            <small>usuários operacionais</small>
+            <span>Empresas ativas</span>
+            <strong>{summary?.active_company_count ?? 0}</strong>
+            <small>contas em uso</small>
           </div>
           <div className="metric-card">
-            <span>CRM</span>
-            <strong>{state.contacts.length}</strong>
-            <small>contatos em base</small>
+            <span>Contatos ativos</span>
+            <strong>{summary?.active_contact_count ?? 0}</strong>
+            <small>pessoas disponíveis</small>
           </div>
           <div className="metric-card">
-            <span>Entrega</span>
-            <strong>{activeProjects}</strong>
-            <small>projetos ativos</small>
+            <span>Projetos</span>
+            <strong>{recentProjects.length}</strong>
+            <small>{summary?.active_project_count ?? 0} em andamento</small>
           </div>
           <div className="metric-card">
             <span>Auditoria</span>
-            <strong>{state.auditEvents.length}</strong>
+            <strong>{recentAuditEvents.length}</strong>
             <small>eventos recentes</small>
           </div>
+        </div>
+
+        <div className="helper-card dashboard-session-card">
+          <strong>Sessão ativa</strong>
+          <p>
+            {currentUser.full_name} · {currentUser.email}
+          </p>
+          <small>
+            {currentUser.roles.length} papel(is) · {currentUser.permissions.length} permissão(ões)
+            {currentUser.is_superuser ? " · superusuário" : ""}
+          </small>
         </div>
       </article>
 
@@ -145,23 +108,23 @@ export function DashboardPage() {
           </div>
           <div className="crm-summary-grid">
             <div className="metric-card">
-              <span>Empresas ativas</span>
-              <strong>{activeCompanies}</strong>
-              <small>contas em uso</small>
+              <span>Empresas</span>
+              <strong>{summary?.active_company_count ?? 0}</strong>
+              <small>cadastros ativos</small>
             </div>
             <div className="metric-card">
-              <span>Contatos ativos</span>
-              <strong>{activeContacts}</strong>
-              <small>pessoas disponíveis</small>
+              <span>Contatos</span>
+              <strong>{summary?.active_contact_count ?? 0}</strong>
+              <small>base operacional</small>
             </div>
             <div className="metric-card">
               <span>Leads</span>
-              <strong>{state.leads.length}</strong>
+              <strong>{summary?.lead_count ?? 0}</strong>
               <small>demandas abertas</small>
             </div>
             <div className="metric-card">
               <span>Ganhas</span>
-              <strong>{wonOpportunities}</strong>
+              <strong>{summary?.won_opportunity_count ?? 0}</strong>
               <small>oportunidades fechadas</small>
             </div>
           </div>
@@ -194,7 +157,7 @@ export function DashboardPage() {
 
           <div className="dashboard-section">
             <ul className="mini-list">
-              {state.recentProjects.map((project) => (
+              {recentProjects.map((project) => (
                 <li key={project.id} className="mini-list-item">
                   <div>
                     <strong>{project.name}</strong>
@@ -203,7 +166,7 @@ export function DashboardPage() {
                   <small>{formatDateTime(project.created_at)}</small>
                 </li>
               ))}
-              {state.recentProjects.length === 0 && <li className="mini-list-empty">Nenhum projeto disponível.</li>}
+              {recentProjects.length === 0 && <li className="mini-list-empty">Nenhum projeto disponível.</li>}
             </ul>
           </div>
 
@@ -234,11 +197,11 @@ export function DashboardPage() {
               <span className="eyebrow">Auditoria</span>
               <h3>Último evento</h3>
             </div>
-            {state.auditEvents[0] ? (
+            {recentAuditEvents[0] ? (
               <div className="helper-card">
-                <strong>{state.auditEvents[0].action}</strong>
-                <p>{state.auditEvents[0].actor_email || "Sistema"}</p>
-                <small>{formatDateTime(state.auditEvents[0].created_at)}</small>
+                <strong>{recentAuditEvents[0].action}</strong>
+                <p>{recentAuditEvents[0].actor_email || "Sistema"}</p>
+                <small>{formatDateTime(recentAuditEvents[0].created_at)}</small>
               </div>
             ) : (
               <div className="empty-state-panel">

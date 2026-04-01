@@ -1,37 +1,46 @@
 # Active Board
 
-Quadro operacional para manter o projeto em movimento sem frentes paradas.
+Repriorização atual: foco imediato em performance percebida de `dashboard` e em `projects`.
 
 ## Em andamento
 
-- `project-manager`
-  manter backlog imediato, dependências e owners atualizados
-- `principal-engineer`
-  integrar cortes, validar e publicar
-- `workflow-projects`
-  consolidar workflow comercial -> kickoff -> projeto
 - `frontend-ux`
-  consolidar CRM operacional em contas, leads, oportunidades e projetos
-- `qa-release`
-  ampliar smoke tests e proteger fluxos críticos do frontend
+  reduzir tempo de percepção no dashboard, melhorar loading states, empty states e consistência visual de `projects`
+- `workflow-projects`
+  fechar a experiência de `projects` como corte operacional do funil até a entrega
 - `observability-platform`
-  melhorar medição de performance, erros e runbooks de análise
+  medir latência percebida, tempo de carregamento e pontos de fricção no frontend
+- `qa-release`
+  validar navegação crítica do dashboard e do módulo `projects` após cada integração
 
-## Próximos
+## Dependências
 
-- `product-architect`
-  detalhar workflow comercial até aprovação, fechamento e abertura de projeto
 - `backend-platform`
-  preparar próximo módulo de domínio com menor atrito de integração
-- `security-sre`
-  seguir com baseline de segurança e validação pós-publicação
+  manter contrato atual de dashboard, listagens e `projects` estável para não quebrar o frontend
+- `product-architect`
+  confirmar quais indicadores do dashboard representam valor real e quais são apenas ruído
+- `principal-engineer`
+  integrar sem misturar cortes de performance com mudanças funcionais maiores
 
-## Backlog imediato
+## Riscos
 
-1. enriquecer workflow comercial com regras mais explícitas de transição e kickoff
-2. amadurecer `contacts` e `dashboard` no frontend para o mesmo padrão operacional
-3. ampliar smoke E2E para CRM além de auth/navegação/projetos
-4. instrumentar profiling/observabilidade leve para analisar performance real
+1. dashboard virar apenas melhoria cosmética sem reduzir fricção real
+2. `projects` ganhar tela bonita antes de ter fluxo confiável de criação e transição
+3. contratos de API mudarem durante o ajuste visual e gerarem retrabalho no frontend
+4. observabilidade atrasar e deixar a percepção de lentidão sem dado objetivo
+
+## Ordem de integração
+
+1. estabilizar contratos de `dashboard` e `projects`
+2. publicar melhoria de loading/empty states no frontend
+3. validar smoke funcional no ambiente publicado
+4. medir impacto de percepção e ajustar pontos mais lentos
+
+## Próximo corte recomendado
+
+- `dashboard` com foco em leitura rápida de status e indicadores úteis
+- `projects` com fluxo curto de criação, vínculo e acompanhamento
+- depois disso, ampliar apenas o que impactar diretamente percepção e operação
 
 ## Regra de atualização
 

@@ -68,6 +68,12 @@ class ProjectService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
         return project
 
+    def get_project_detail(self, project_id: int) -> Project:
+        project = self.project_repository.get_detail_by_id(project_id)
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        return project
+
     def get_by_opportunity_id(self, opportunity_id: int) -> Project | None:
         return self.project_repository.get_by_opportunity_id(opportunity_id)
 

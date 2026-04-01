@@ -15,7 +15,7 @@ class ProjectRepository:
     def list_all(self) -> list[Project]:
         stmt = (
             select(Project)
-            .options(joinedload(Project.opportunity), joinedload(Project.company), joinedload(Project.contact))
+            .options(joinedload(Project.company), joinedload(Project.contact))
             .order_by(Project.created_at.desc(), Project.id.desc())
         )
         return list(self.db.execute(stmt).scalars().unique().all())
@@ -49,10 +49,22 @@ class ProjectRepository:
     def get_by_id(self, project_id: int) -> Optional[Project]:
         stmt = (
             select(Project)
-            .options(joinedload(Project.opportunity), joinedload(Project.company), joinedload(Project.contact))
+            .options(joinedload(Project.company), joinedload(Project.contact))
             .where(Project.id == project_id)
         )
         return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_detail_by_id(self, project_id: int) -> Optional[Project]:
+        stmt = (
+            select(Project)
+            .options(
+                joinedload(Project.company),
+                joinedload(Project.contact),
+                joinedload(Project.phases),
+            )
+            .where(Project.id == project_id)
+        )
+        return self.db.execute(stmt).scalars().unique().one_or_none()
 
     def get_by_opportunity_id(self, opportunity_id: int) -> Optional[Project]:
         stmt = select(Project).where(Project.opportunity_id == opportunity_id)
@@ -94,7 +106,7 @@ class ProjectRepository:
     def _build_filtered_stmt(self, *, query: str | None, status: str | None):
         stmt = (
             select(Project)
-            .options(joinedload(Project.opportunity), joinedload(Project.company), joinedload(Project.contact))
+            .options(joinedload(Project.company), joinedload(Project.contact))
             .order_by(Project.created_at.desc(), Project.id.desc())
         )
         if status:

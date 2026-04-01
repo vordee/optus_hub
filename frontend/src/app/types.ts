@@ -42,6 +42,41 @@ export interface AuditEventItem {
   details: Record<string, unknown> | null;
 }
 
+export interface DashboardSummaryResponse {
+  user_count: number;
+  active_company_count: number;
+  active_contact_count: number;
+  lead_count: number;
+  won_opportunity_count: number;
+  active_project_count: number;
+  recent_contacts: Array<{
+    id: number;
+    full_name: string;
+    company_name: string | null;
+    created_at: string;
+  }>;
+  recent_leads: Array<{
+    id: number;
+    title: string;
+    company_name: string | null;
+    status: string;
+    created_at: string;
+  }>;
+  recent_opportunities: Array<{
+    id: number;
+    title: string;
+    status: string;
+    created_at: string;
+  }>;
+  recent_projects: Array<{
+    id: number;
+    name: string;
+    status: string;
+    created_at: string;
+  }>;
+  recent_audit_events: AuditEventItem[];
+}
+
 export interface CompanyItem {
   id: number;
   legal_name: string;
@@ -186,6 +221,13 @@ export interface ProjectTaskItem {
   assigned_to_email: string | null;
   due_date: string | null;
   created_at: string;
+}
+
+export interface ProjectTaskListResponse {
+  items: ProjectTaskItem[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export type NavKey =

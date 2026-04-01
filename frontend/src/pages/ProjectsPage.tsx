@@ -21,6 +21,7 @@ import type {
   ProjectListResponse,
   ProjectPhaseItem,
   ProjectTaskItem,
+  ProjectTaskListResponse,
 } from "../app/types";
 
 const PAGE_SIZE = 8;
@@ -68,11 +69,16 @@ export function ProjectsPage() {
   const [selectedDetail, setSelectedDetail] = useState<ProjectDetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const [auxiliaryLoading, setAuxiliaryLoading] = useState(false);
+  const [auxiliaryLoaded, setAuxiliaryLoaded] = useState(false);
+  const [auxiliaryError, setAuxiliaryError] = useState<string | null>(null);
+  const [tasksProjectId, setTasksProjectId] = useState<number | null>(null);
   const [projectView, setProjectView] = useState<"visao" | "fases" | "tarefas" | "historico" | "cadastro">("visao");
   const [form, setForm] = useState({
     opportunity_id: "",
@@ -135,18 +141,41 @@ export function ProjectsPage() {
   const selectedOpportunity = safeOpportunities.find((item) => String(item.id) === form.opportunity_id) || null;
 
   useEffect(() => {
-    void loadProjects();
-  }, [page, query, filterStatus]);
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
+    void loadProjects();
+  }, [page, debouncedQuery, filterStatus]);
+
+  useEffect(() => {
+    if (projectView !== "cadastro" || auxiliaryLoaded || auxiliaryLoading || auxiliaryError) {
+      return;
+    }
+
     void loadAuxiliaryData();
-  }, []);
+  }, [projectView, auxiliaryLoaded, auxiliaryLoading, auxiliaryError]);
+
+  useEffect(() => {
+    if (projectView !== "cadastro") {
+      setAuxiliaryError(null);
+    }
+  }, [projectView]);
+
+  useEffect(() => {
+    if (projectView !== "tarefas" || selectedId === null || tasksProjectId === selectedId) {
+      return;
+    }
+
+    void loadTasks(selectedId);
+  }, [projectView, selectedId, tasksProjectId]);
 
   async function loadProjects() {
     try {
       setError(null);
       const projectResponse = await apiRequest<ProjectListResponse>(
-        `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(query)}&status=${encodeURIComponent(filterStatus)}`,
+        `/v1/projects?page=${page}&page_size=${PAGE_SIZE}&query=${encodeURIComponent(debouncedQuery)}&status=${encodeURIComponent(filterStatus)}`,
       );
       setItems(ensureArray(projectResponse.items));
       setTotal(projectResponse.total);
@@ -156,23 +185,34 @@ export function ProjectsPage() {
   }
 
   async function loadAuxiliaryData() {
+    setAuxiliaryLoading(true);
+    setError(null);
     try {
       const [companyItems, contactItems, opportunityResponse] = await Promise.all([
         apiRequest<CompanyItem[]>("/v1/crm/companies"),
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
-        apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=100"),
+        apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=25"),
       ]);
       setCompanies(ensureArray(companyItems));
       setContacts(ensureArray(contactItems));
       setOpportunities(ensureArray(opportunityResponse.items));
+      setAuxiliaryLoaded(true);
+      setAuxiliaryError(null);
     } catch (loadError) {
-      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar dados auxiliares do projeto.");
+      const message = loadError instanceof ApiError ? loadError.message : "Falha ao carregar dados auxiliares do projeto.";
+      setAuxiliaryError(message);
+      setError(message);
+    } finally {
+      setAuxiliaryLoading(false);
     }
   }
 
   function populate(item: ProjectItem) {
     setSelectedId(item.id);
     setProjectView("visao");
+    setTasks([]);
+    setTasksProjectId(null);
+    setSelectedDetail(null);
     setForm({
       opportunity_id: item.opportunity_id ? String(item.opportunity_id) : "",
       company_id: item.company_id ? String(item.company_id) : "",
@@ -190,14 +230,23 @@ export function ProjectsPage() {
   async function loadDetail(projectId: number) {
     try {
       setError(null);
-      const [detail, taskItems] = await Promise.all([
-        apiRequest<ProjectDetailItem>(`/v1/projects/${projectId}`),
-        apiRequest<ProjectTaskItem[]>(`/v1/projects/${projectId}/tasks`),
-      ]);
+      const detail = await apiRequest<ProjectDetailItem>(`/v1/projects/${projectId}`);
       setSelectedDetail(detail);
-      setTasks(ensureArray(taskItems));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar detalhe do projeto.");
+    }
+  }
+
+  async function loadTasks(projectId: number) {
+    try {
+      setError(null);
+      const taskItems = await apiRequest<ProjectTaskItem[] | ProjectTaskListResponse>(
+        `/v1/projects/${projectId}/tasks?page=1&page_size=100`,
+      );
+      setTasks(Array.isArray(taskItems) ? ensureArray(taskItems) : ensureArray(taskItems?.items));
+      setTasksProjectId(projectId);
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar tarefas do projeto.");
     }
   }
 
@@ -277,6 +326,7 @@ export function ProjectsPage() {
     setSelectedId(null);
     setSelectedDetail(null);
     setTasks([]);
+    setTasksProjectId(null);
     setProjectView("visao");
     setForm({
       opportunity_id: "",
@@ -328,7 +378,7 @@ export function ProjectsPage() {
         assigned_to_email: "",
         due_date: "",
       });
-      await loadDetail(selectedId);
+      await loadTasks(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao criar tarefa do projeto.");
     } finally {
@@ -345,7 +395,7 @@ export function ProjectsPage() {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });
-      await loadDetail(selectedId);
+      await loadTasks(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao atualizar tarefa do projeto.");
     }

@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from app.schemas.status_history import StatusHistoryResponse
+
 
 class ProjectTaskCreateRequest(BaseModel):
     project_phase_id: Optional[int] = None
@@ -33,3 +35,14 @@ class ProjectTaskResponse(BaseModel):
     assigned_to_email: Optional[str]
     due_date: Optional[date]
     created_at: datetime
+
+
+class ProjectTaskListResponse(BaseModel):
+    items: list[ProjectTaskResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class ProjectTaskDetailResponse(ProjectTaskResponse):
+    history: list[StatusHistoryResponse]

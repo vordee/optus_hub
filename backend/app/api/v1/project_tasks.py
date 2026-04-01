@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import get_current_user_email, require_permission
 from app.core.database import SessionLocal
-from app.schemas.project_task import ProjectTaskCreateRequest, ProjectTaskResponse, ProjectTaskUpdateRequest
+from app.schemas.project_task import (
+    ProjectTaskCreateRequest,
+    ProjectTaskDetailResponse,
+    ProjectTaskListResponse,
+    ProjectTaskResponse,
+    ProjectTaskUpdateRequest,
+)
+from app.schemas.status_history import StatusHistoryResponse
 from app.services.audit_service import AuditService
 from app.services.project_task_service import ProjectTaskService
 
@@ -24,14 +31,60 @@ def serialize_task(task) -> ProjectTaskResponse:
     )
 
 
+def serialize_status_history(item) -> StatusHistoryResponse:
+    return StatusHistoryResponse(
+        id=item.id,
+        entity_type=item.entity_type,
+        entity_id=item.entity_id,
+        from_status=item.from_status,
+        to_status=item.to_status,
+        note=item.note,
+        changed_by_email=item.changed_by_email,
+        changed_at=item.changed_at,
+    )
+
+
 @router.get(
     "/projects/{project_id}/tasks",
-    response_model=list[ProjectTaskResponse],
+    response_model=ProjectTaskListResponse,
     dependencies=[Depends(require_permission("project_tasks:read"))],
 )
-def list_tasks(project_id: int) -> list[ProjectTaskResponse]:
+def list_tasks(
+    project_id: int,
+    query: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+) -> ProjectTaskListResponse:
     with SessionLocal() as db:
-        return [serialize_task(task) for task in ProjectTaskService(db).list_tasks(project_id)]
+        items, total = ProjectTaskService(db).list_tasks(
+            project_id,
+            query=query,
+            status=status,
+            page=page,
+            page_size=page_size,
+        )
+        return ProjectTaskListResponse(
+            items=[serialize_task(task) for task in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
+
+
+@router.get(
+    "/projects/{project_id}/tasks/{task_id}",
+    response_model=ProjectTaskDetailResponse,
+    dependencies=[Depends(require_permission("project_tasks:read"))],
+)
+def get_task(project_id: int, task_id: int) -> ProjectTaskDetailResponse:
+    with SessionLocal() as db:
+        service = ProjectTaskService(db)
+        task = service.get_task(project_id, task_id)
+        return ProjectTaskDetailResponse(
+            **serialize_task(task).model_dump(),
+            history=[serialize_status_history(item) for item in service.list_status_history(project_id, task_id)],
+        )
 
 
 @router.post(
@@ -46,7 +99,7 @@ def create_task(
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectTaskResponse:
     with SessionLocal() as db:
-        task = ProjectTaskService(db).create_task(project_id, payload)
+        task = ProjectTaskService(db).create_task(project_id, payload, changed_by_email=current_user_email)
         AuditService(db).record_event(
             action="project_task.create",
             status="success",
@@ -79,7 +132,7 @@ def update_task(
     current_user_email: str = Depends(get_current_user_email),
 ) -> ProjectTaskResponse:
     with SessionLocal() as db:
-        task = ProjectTaskService(db).update_task(project_id, task_id, payload)
+        task = ProjectTaskService(db).update_task(project_id, task_id, payload, changed_by_email=current_user_email)
         AuditService(db).record_event(
             action="project_task.update",
             status="success",
