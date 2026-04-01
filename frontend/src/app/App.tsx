@@ -76,6 +76,7 @@ export function App() {
     error: null,
   });
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const activeItem = NAV_SECTIONS.flatMap((section) => section.items).find((item) => item.key === activeNav);
 
   useEffect(() => {
@@ -125,24 +126,36 @@ export function App() {
   const safeRoles = ensureArray(session.user.roles);
 
   return (
-    <div className="app-frame">
+    <div className={sidebarCollapsed ? "app-frame sidebar-collapsed" : "app-frame"}>
       <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-logo-surface">
             <img alt="Optus Group" className="brand-logo" src={optusLogo} />
           </div>
-          <div className="brand-copy">
-            <div className="brand-kicker">Optus Hub</div>
-          </div>
+          {!sidebarCollapsed && (
+            <div className="brand-copy">
+              <div className="brand-kicker">Optus Hub</div>
+            </div>
+          )}
         </div>
+
+        <button
+          className="ghost-button sidebar-toggle"
+          onClick={() => setSidebarCollapsed((current) => !current)}
+          type="button"
+        >
+          {sidebarCollapsed ? "Abrir menu" : "Recolher menu"}
+        </button>
 
         <nav className="nav-list">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="nav-group">
-              <div className="nav-group-header">
-                <span className="nav-group-title">{section.title}</span>
-                <span className="nav-group-summary">{section.summary}</span>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="nav-group-header">
+                  <span className="nav-group-title">{section.title}</span>
+                  <span className="nav-group-summary">{section.summary}</span>
+                </div>
+              )}
               <div className="nav-group-items">
                 {section.items.map((item) => (
                   <button
@@ -160,10 +173,12 @@ export function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <div>
-            <strong>{session.user.full_name}</strong>
-            <small>{session.user.email}</small>
-          </div>
+          {!sidebarCollapsed && (
+            <div>
+              <strong>{session.user.full_name}</strong>
+              <small>{session.user.email}</small>
+            </div>
+          )}
           <button className="ghost-button" onClick={handleLogout} type="button">
             Sair
           </button>

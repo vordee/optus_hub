@@ -45,15 +45,19 @@ textarea {
 
 .app-frame {
   display: grid;
-  grid-template-columns: 304px 1fr;
+  grid-template-columns: 256px 1fr;
   min-height: 100vh;
+}
+
+.app-frame.sidebar-collapsed {
+  grid-template-columns: 92px 1fr;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 28px;
+  gap: 16px;
+  padding: 18px 16px;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   background:
     linear-gradient(180deg, rgba(15, 18, 16, 0.98), rgba(17, 19, 23, 0.96)),
@@ -64,20 +68,20 @@ textarea {
 .brand-block,
 .hero-brand {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .brand-logo-surface {
   width: fit-content;
-  padding: 14px 18px;
-  border-radius: 20px;
+  padding: 10px 12px;
+  border-radius: 16px;
   background: var(--surface-strong);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
 .brand-logo {
   display: block;
-  width: min(220px, 100%);
+  width: min(180px, 100%);
   height: auto;
 }
 
@@ -114,12 +118,12 @@ textarea {
 .nav-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .nav-group {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nav-group-header {
@@ -150,13 +154,18 @@ textarea {
   align-items: start;
   gap: 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   color: inherit;
   cursor: pointer;
-  padding: 13px 16px;
+  padding: 10px 12px;
   text-align: left;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.sidebar-toggle {
+  width: 100%;
+  justify-content: center;
 }
 
 .nav-item:hover,
@@ -230,7 +239,7 @@ textarea {
   margin-top: auto;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -240,16 +249,16 @@ textarea {
 }
 
 .main-content {
-  padding: 28px;
+  padding: 18px 20px;
 }
 
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -267,7 +276,7 @@ textarea {
 .page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(320px, 420px);
-  gap: 20px;
+  gap: 14px;
 }
 
 .page-grid.single {
@@ -276,11 +285,11 @@ textarea {
 
 .card {
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 20px;
   background: var(--surface);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow);
-  padding: 22px;
+  padding: 16px;
 }
 
 .highlight-card {
@@ -291,7 +300,7 @@ textarea {
 }
 
 .section-heading {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .section-heading p {
@@ -301,15 +310,15 @@ textarea {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .metric-card {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.78);
-  padding: 16px;
+  padding: 12px;
 }
 
 .metric-card span {
@@ -328,14 +337,14 @@ textarea {
 .table-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 10px;
   color: var(--text-soft);
   font-size: 13px;
 }
 
 .table-summary span {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(141, 197, 61, 0.1);
 }
@@ -347,7 +356,7 @@ table {
 
 th,
 td {
-  padding: 12px 10px;
+  padding: 9px 8px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
@@ -368,7 +377,7 @@ tbody tr.selected-row {
 .form-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .field {
@@ -392,22 +401,22 @@ tbody tr.selected-row {
 .toolbar select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
-  padding: 12px 14px;
-  min-height: 46px;
+  padding: 10px 12px;
+  min-height: 40px;
   color: inherit;
 }
 
 .field textarea {
-  min-height: 110px;
+  min-height: 88px;
   resize: vertical;
 }
 
 .toolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .contacts-toolbar {
@@ -421,18 +430,18 @@ tbody tr.selected-row {
 .status-board {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .status-board-card {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.78);
-  padding: 16px;
+  padding: 12px;
   cursor: pointer;
 }
 
@@ -455,8 +464,8 @@ tbody tr.selected-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
-  gap: 12px;
+  margin-top: 10px;
+  gap: 8px;
 }
 
 .pager-actions {
@@ -466,8 +475,8 @@ tbody tr.selected-row {
 }
 
 .detail-panel {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
@@ -479,10 +488,10 @@ tbody tr.selected-row {
 
 .detail-hero {
   display: grid;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 16px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(240, 247, 231, 0.84)),
     rgba(255, 255, 255, 0.72);
