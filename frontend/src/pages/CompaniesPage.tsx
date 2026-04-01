@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
+import { AppIcon } from "../app/icons";
 import { formatOpportunityStatus } from "../app/labels";
+import { QuickFormModal } from "../app/QuickFormModal";
 import type {
   CompanyItem,
   ContactItem,
@@ -22,6 +24,7 @@ export function CompaniesPage() {
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({
     legal_name: "",
     trade_name: "",
@@ -89,6 +92,25 @@ export function CompaniesPage() {
     });
   }
 
+  function startCreate() {
+    setSelectedId(null);
+    setForm({ legal_name: "", trade_name: "", tax_id: "", is_active: true });
+    setIsModalOpen(true);
+  }
+
+  function startEdit() {
+    if (!selectedCompany) {
+      return;
+    }
+
+    populate(selectedCompany);
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -113,6 +135,7 @@ export function CompaniesPage() {
         });
       }
       setSelectedId(null);
+      setIsModalOpen(false);
       setForm({ legal_name: "", trade_name: "", tax_id: "", is_active: true });
       await load();
     } catch (submitError) {
@@ -169,49 +192,29 @@ export function CompaniesPage() {
 
       <article className="card">
         <div className="stacked-card-sections">
-          <form className="form-card" onSubmit={handleSubmit}>
-            <div className="section-heading">
-              <span className="eyebrow">Cadastro</span>
-              <h3>{selectedId === null ? "Nova empresa" : "Editar empresa"}</h3>
-            </div>
-            <label className="field">
-              <span>Razão social</span>
-              <input value={form.legal_name} onChange={(event) => setForm((current) => ({ ...current, legal_name: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Nome fantasia</span>
-              <input value={form.trade_name} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>CNPJ / Tax ID</span>
-              <input value={form.tax_id} onChange={(event) => setForm((current) => ({ ...current, tax_id: event.target.value }))} />
-            </label>
-            <label className="check-field">
-              <input checked={form.is_active} onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))} type="checkbox" />
-              <span>Empresa ativa</span>
-            </label>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                {selectedId === null ? "Criar empresa" : "Atualizar empresa"}
-              </button>
-              {selectedId !== null && (
-                <button className="ghost-button" onClick={resetForm} type="button">
-                  Limpar edição
-                </button>
-              )}
-            </div>
-          </form>
-
           {selectedCompany ? (
             <div className="detail-panel detail-panel-standalone">
+              <div className="workspace-header workspace-header-compact">
+                <div className="section-heading section-heading-compact">
+                  <span className="eyebrow">Painel da conta</span>
+                  <h3>{selectedCompany.trade_name || selectedCompany.legal_name}</h3>
+                  <p className="section-copy">A conta fica em foco com contexto comercial e ação curta fora da tabela.</p>
+                </div>
+                <div className="workspace-actions">
+                  <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+                    <AppIcon name="add" />
+                    <span>Nova empresa</span>
+                  </button>
+                  <button className="ghost-button button-with-icon" onClick={startEdit} type="button">
+                    <AppIcon name="edit" />
+                    <span>Editar</span>
+                  </button>
+                </div>
+              </div>
               <div className="detail-hero">
                 <div className="detail-badges">
                   <span className="status-pill">{selectedCompany.is_active ? "Conta ativa" : "Conta inativa"}</span>
                   <span className="status-pill detail-source">{selectedCompany.tax_id || "Sem CNPJ / Tax ID"}</span>
-                </div>
-                <div className="section-heading">
-                  <span className="eyebrow">Painel da conta</span>
-                  <h3>{selectedCompany.trade_name || selectedCompany.legal_name}</h3>
                 </div>
                 <div className="detail-meta detail-meta-dense">
                   <span>{selectedCompany.legal_name}</span>
@@ -288,6 +291,10 @@ export function CompaniesPage() {
             <div className="empty-state-panel">
               <strong>Selecione uma empresa na tabela</strong>
               <p>O painel da conta mostra contexto comercial sem te jogar direto em um formulário.</p>
+              <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+                <AppIcon name="add" />
+                <span>Nova empresa</span>
+              </button>
             </div>
           )}
         </div>
@@ -297,6 +304,12 @@ export function CompaniesPage() {
         <div className="section-heading">
           <span className="eyebrow">Tabela</span>
           <h3>Base de empresas</h3>
+        </div>
+        <div className="toolbar contacts-toolbar">
+          <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+            <AppIcon name="add" />
+            <span>Nova empresa</span>
+          </button>
         </div>
         <div className="table-wrap">
           <table>
@@ -329,6 +342,40 @@ export function CompaniesPage() {
           </table>
         </div>
       </article>
+
+      <QuickFormModal
+        description="Cadastro curto da conta sem quebrar a leitura de relacionamento e carteira."
+        onClose={closeModal}
+        open={isModalOpen}
+        title={selectedId === null ? "Nova empresa" : "Editar empresa"}
+      >
+        <form className="form-card" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Razão social</span>
+            <input value={form.legal_name} onChange={(event) => setForm((current) => ({ ...current, legal_name: event.target.value }))} />
+          </label>
+          <label className="field">
+            <span>Nome fantasia</span>
+            <input value={form.trade_name} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
+          </label>
+          <label className="field">
+            <span>CNPJ / Tax ID</span>
+            <input value={form.tax_id} onChange={(event) => setForm((current) => ({ ...current, tax_id: event.target.value }))} />
+          </label>
+          <label className="check-field">
+            <input checked={form.is_active} onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))} type="checkbox" />
+            <span>Empresa ativa</span>
+          </label>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {selectedId === null ? "Criar empresa" : "Atualizar empresa"}
+            </button>
+            <button className="ghost-button" onClick={() => { closeModal(); resetForm(); }} type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
     </section>
   );
 }

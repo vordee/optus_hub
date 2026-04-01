@@ -6,6 +6,7 @@ import { consumeOpportunityDraft } from "../app/crmDrafts";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
+import { QuickFormModal } from "../app/QuickFormModal";
 import type { LeadItem, LeadListResponse, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
 
 const PAGE_SIZE = 8;
@@ -42,6 +43,7 @@ export function OpportunitiesPage() {
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [listView, setListView] = useState<"lista" | "pipeline">("pipeline");
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [kickoffForm, setKickoffForm] = useState({
     project_name: "",
     kickoff_owner_email: "",
@@ -108,6 +110,7 @@ export function OpportunitiesPage() {
       amount: draft.amount,
     });
     setDraftNotice("Rascunho trazido do lead selecionado. Revise e salve a oportunidade.");
+    setIsModalOpen(true);
   }, []);
 
   async function loadOpportunities() {
@@ -203,6 +206,16 @@ export function OpportunitiesPage() {
     void loadDetail(item.id);
   }
 
+  function populateForm(item: Pick<OpportunityItem, "lead_id" | "title" | "description" | "status" | "amount">) {
+    setForm({
+      lead_id: item.lead_id ? String(item.lead_id) : "",
+      title: item.title,
+      description: item.description || "",
+      status: item.status,
+      amount: item.amount !== null ? String(item.amount) : "",
+    });
+  }
+
   async function loadDetail(opportunityId: number) {
     try {
       setError(null);
@@ -215,6 +228,7 @@ export function OpportunitiesPage() {
   function resetForm() {
     setSelectedId(null);
     setSelectedDetail(null);
+    setIsModalOpen(false);
     setDraftNotice(null);
     setTransitionNote("");
     setForm({ lead_id: "", title: "", description: "", status: "open", amount: "" });
@@ -224,6 +238,33 @@ export function OpportunitiesPage() {
       kickoff_target_date: "",
       kickoff_notes: "",
     });
+  }
+
+  function openCreateModal() {
+    resetForm();
+    setIsModalOpen(true);
+  }
+
+  function openEditModal() {
+    if (selectedDetail) {
+      setSelectedId(selectedDetail.id);
+      populateForm(selectedDetail);
+      setIsModalOpen(true);
+      return;
+    }
+
+    const selectedItem = items.find((item) => item.id === selectedId);
+    if (!selectedItem) {
+      return;
+    }
+
+    setSelectedId(selectedItem.id);
+    populateForm(selectedItem);
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -284,10 +325,16 @@ export function OpportunitiesPage() {
               </div>
             </div>
             <div className="workspace-actions workspace-actions-tight">
-              <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+              <button className="primary-button button-with-icon" onClick={selectedId !== null ? openEditModal : openCreateModal} type="button">
                 <AppIcon name="add" />
-                <span>{selectedId !== null ? "Novo registro" : "Limpar foco"}</span>
+                <span>{selectedId !== null ? "Editar oportunidade" : "Nova oportunidade"}</span>
               </button>
+              {selectedId !== null && (
+                <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
+                  <AppIcon name="close" />
+                  <span>Limpar foco</span>
+                </button>
+              )}
               <div className="table-summary">
                 <span>{total} oportunidades</span>
                 <span>{hasFilters ? "Recorte filtrado" : "Carteira completa"}</span>
@@ -481,6 +528,14 @@ export function OpportunitiesPage() {
                     {selectedListItem?.company_name || "Sem empresa"} · {selectedListItem?.contact_name || "Sem contato"}
                   </p>
                 </div>
+                <div className="helper-card">
+                  <strong>Ação rápida</strong>
+                  <p>Faça ajustes comerciais sem desmontar a leitura do pipeline.</p>
+                  <button className="ghost-button button-with-icon" onClick={openEditModal} type="button">
+                    <AppIcon name="edit" />
+                    <span>Editar oportunidade</span>
+                  </button>
+                </div>
               </div>
 
               <div className="crm-context-grid crm-context-grid-compact">
@@ -631,83 +686,85 @@ export function OpportunitiesPage() {
               <div className="empty-state-panel">
                 <strong>Selecione uma oportunidade</strong>
                 <p>O painel lateral concentra leitura do negócio, transições e ponte para projeto sem misturar tudo na carteira.</p>
-              </div>
-            )}
-
-            <form className="form-card compact-action-form opportunity-form-shell" onSubmit={handleSubmit}>
-              <div className="workspace-header workspace-header-compact">
-                <div className="section-heading">
-                  <span className="eyebrow">Ação rápida</span>
-                  <h3>{selectedId === null ? "Cadastrar oportunidade" : "Ajustar oportunidade"}</h3>
-                </div>
-                {selectedId !== null && (
-                  <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
-                    <AppIcon name="add" />
-                    Novo
-                  </button>
-                )}
-              </div>
-              {draftNotice && <div className="inline-note">{draftNotice}</div>}
-              {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
-              <div className="task-form-grid task-form-grid-2">
-                <label className="field">
-                  <span>Lead</span>
-                  <select
-                    value={form.lead_id}
-                    onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
-                  >
-                    <option value="">Sem lead</option>
-                    {safeLeads.map((lead) => (
-                      <option key={lead.id} value={lead.id}>
-                        {lead.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Status</span>
-                  <select
-                    value={form.status}
-                    onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-                  >
-                    {OPPORTUNITY_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {formatOpportunityStatus(status)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <label className="field">
-                <span>Título</span>
-                <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-              </label>
-              <div className="task-form-grid task-form-grid-2">
-                <label className="field">
-                  <span>Valor</span>
-                  <input
-                    value={form.amount}
-                    onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                    type="number"
-                  />
-                </label>
-                <label className="field">
-                  <span>Descrição curta</span>
-                  <input
-                    value={form.description}
-                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="primary-button" type="submit">
-                  {selectedId === null ? "Criar oportunidade" : "Salvar ajustes"}
+                <button className="primary-button button-with-icon" onClick={openCreateModal} type="button">
+                  <AppIcon name="add" />
+                  <span>Nova oportunidade</span>
                 </button>
               </div>
-            </form>
+            )}
           </div>
         </aside>
       </section>
+
+      <QuickFormModal
+        description="Edite o negócio sem sair da carteira ou perder o painel lateral."
+        onClose={closeModal}
+        open={isModalOpen}
+        title={selectedId === null ? "Nova oportunidade" : "Editar oportunidade"}
+      >
+        <form className="form-card opportunity-form-shell" onSubmit={handleSubmit}>
+          {draftNotice && <div className="inline-note">{draftNotice}</div>}
+          {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
+          <div className="task-form-grid task-form-grid-2">
+            <label className="field">
+              <span>Lead</span>
+              <select
+                value={form.lead_id}
+                onChange={(event) => setForm((current) => ({ ...current, lead_id: event.target.value }))}
+              >
+                <option value="">Sem lead</option>
+                {safeLeads.map((lead) => (
+                  <option key={lead.id} value={lead.id}>
+                    {lead.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Status</span>
+              <select
+                value={form.status}
+                onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+              >
+                {OPPORTUNITY_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatOpportunityStatus(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="field">
+            <span>Título</span>
+            <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+          </label>
+          <div className="task-form-grid task-form-grid-2">
+            <label className="field">
+              <span>Valor</span>
+              <input
+                value={form.amount}
+                onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+                type="number"
+              />
+            </label>
+            <label className="field">
+              <span>Descrição curta</span>
+              <input
+                value={form.description}
+                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {selectedId === null ? "Criar oportunidade" : "Salvar ajustes"}
+            </button>
+            <button className="ghost-button" onClick={closeModal} type="button">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </QuickFormModal>
     </section>
   );
 }
