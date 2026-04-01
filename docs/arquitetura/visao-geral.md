@@ -28,4 +28,13 @@ Optus Hub centraliza o fluxo operacional em um unico sistema, conectando CRM, co
 
 ## Estado atual
 
-O repositorio contem a fundacao estrutural e documental. A implementacao funcional dos modulos ainda nao comecou.
+O repositorio ja contem implementacao funcional em producao para autenticacao, CRM, kickoff, projetos e integracao read-only inicial com Bling.
+
+O proximo foco arquitetural e fortalecer o CRM operacional com:
+
+- atividades e proximo passo
+- filtros salvos e agrupamento
+- relatorio comercial
+- handoff formal entre oportunidade ganha, projeto e integracao externa
+
+O ERP permanece externo e entra apenas por API.

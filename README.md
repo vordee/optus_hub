@@ -124,17 +124,19 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 
 ### Fase 4
 
-- integração com Bling
-- integração com Diário de Obra
-- fila de sincronização
-- retries
-- logs de integração
+- atividades e proximo passo comercial
+- filtros salvos e agrupamento
+- relatorio comercial
+- handoff formal entre comercial, projeto e integracoes externas
+- integracao read-only inicial com Bling
 
 ### Fase 5
 
+- configuracao de estagios e motivos
 - documentos
 - financeiro
 - indicadores
+- integracao com Diario de Obra
 - novas frentes dependentes do fluxo principal
 
 ## Convenções
@@ -153,6 +155,7 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 - `docs/arquitetura/modulos.md`
 - `docs/arquitetura/fluxo-pop.md`
 - `docs/arquitetura/integracoes.md`
+- `docs/arquitetura/roadmap-crm-operacional.md`
 - `docs/deploy/runtime-current-state.md`
 - `prompts/`
 
