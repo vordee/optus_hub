@@ -16,6 +16,8 @@ import type {
   ContactItem,
   OpportunityItem,
   OpportunityListResponse,
+  ProjectChecklistItem,
+  ProjectChecklistListResponse,
   ProjectDetailItem,
   ProjectItem,
   ProjectListResponse,
@@ -64,6 +66,7 @@ export function ProjectsPage() {
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ProjectChecklistItem[]>([]);
   const [tasks, setTasks] = useState<ProjectTaskItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<ProjectDetailItem | null>(null);
@@ -78,8 +81,10 @@ export function ProjectsPage() {
   const [auxiliaryLoading, setAuxiliaryLoading] = useState(false);
   const [auxiliaryLoaded, setAuxiliaryLoaded] = useState(false);
   const [auxiliaryError, setAuxiliaryError] = useState<string | null>(null);
+  const [checklistSubmitting, setChecklistSubmitting] = useState(false);
+  const [checklistProjectId, setChecklistProjectId] = useState<number | null>(null);
   const [tasksProjectId, setTasksProjectId] = useState<number | null>(null);
-  const [projectView, setProjectView] = useState<"visao" | "fases" | "tarefas" | "historico" | "cadastro">("visao");
+  const [projectView, setProjectView] = useState<"visao" | "fases" | "checklist" | "tarefas" | "historico" | "cadastro">("visao");
   const [form, setForm] = useState({
     opportunity_id: "",
     company_id: "",
@@ -99,7 +104,14 @@ export function ProjectsPage() {
     assigned_to_email: "",
     due_date: "",
   });
+  const [checklistForm, setChecklistForm] = useState({
+    title: "",
+    project_phase_id: "",
+    description: "",
+    status: "pending",
+  });
 
+  const safeChecklistItems = ensureArray(checklistItems);
   const safeTasks = ensureArray(tasks);
   const safeItems = ensureArray(items);
   const safeCompanies = ensureArray(companies);
@@ -118,6 +130,7 @@ export function ProjectsPage() {
   }
 
   const unassignedTasks = safeTasks.filter((task) => task.project_phase_id === null);
+  const unassignedChecklistItems = safeChecklistItems.filter((item) => item.project_phase_id === null);
   const taskStats = {
     total: safeTasks.length,
     pending: safeTasks.filter((task) => task.status === "pending").length,
@@ -125,6 +138,12 @@ export function ProjectsPage() {
     blocked: safeTasks.filter((task) => task.status === "blocked").length,
     done: safeTasks.filter((task) => task.status === "done").length,
     overdue: safeTasks.filter(isTaskOverdue).length,
+  };
+  const checklistStats = {
+    total: safeChecklistItems.length,
+    pending: safeChecklistItems.filter((item) => item.status === "pending").length,
+    blocked: safeChecklistItems.filter((item) => item.status === "blocked").length,
+    done: safeChecklistItems.filter((item) => item.status === "done").length,
   };
   const safePhases = ensureArray(selectedDetail?.phases);
   const safeProjectHistory = ensureArray(selectedDetail?.history);
@@ -171,6 +190,14 @@ export function ProjectsPage() {
     void loadTasks(selectedId);
   }, [projectView, selectedId, tasksProjectId]);
 
+  useEffect(() => {
+    if (projectView !== "checklist" || selectedId === null || checklistProjectId === selectedId) {
+      return;
+    }
+
+    void loadChecklistItems(selectedId);
+  }, [checklistProjectId, projectView, selectedId]);
+
   async function loadProjects() {
     try {
       setError(null);
@@ -210,6 +237,8 @@ export function ProjectsPage() {
   function populate(item: ProjectItem) {
     setSelectedId(item.id);
     setProjectView("visao");
+    setChecklistItems([]);
+    setChecklistProjectId(null);
     setTasks([]);
     setTasksProjectId(null);
     setSelectedDetail(null);
@@ -247,6 +276,19 @@ export function ProjectsPage() {
       setTasksProjectId(projectId);
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar tarefas do projeto.");
+    }
+  }
+
+  async function loadChecklistItems(projectId: number) {
+    try {
+      setError(null);
+      const response = await apiRequest<ProjectChecklistItem[] | ProjectChecklistListResponse>(
+        `/v1/projects/${projectId}/checklist-items?page=1&page_size=100`,
+      );
+      setChecklistItems(Array.isArray(response) ? ensureArray(response) : ensureArray(response?.items));
+      setChecklistProjectId(projectId);
+    } catch (loadError) {
+      setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar checklist do projeto.");
     }
   }
 
@@ -325,6 +367,8 @@ export function ProjectsPage() {
   function resetForm() {
     setSelectedId(null);
     setSelectedDetail(null);
+    setChecklistItems([]);
+    setChecklistProjectId(null);
     setTasks([]);
     setTasksProjectId(null);
     setProjectView("visao");
@@ -346,6 +390,12 @@ export function ProjectsPage() {
       status: "pending",
       assigned_to_email: "",
       due_date: "",
+    });
+    setChecklistForm({
+      title: "",
+      project_phase_id: "",
+      description: "",
+      status: "pending",
     });
   }
 
@@ -398,6 +448,54 @@ export function ProjectsPage() {
       await loadTasks(selectedId);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao atualizar tarefa do projeto.");
+    }
+  }
+
+  async function handleChecklistSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedId === null) {
+      setError("Selecione um projeto antes de criar um item de checklist.");
+      return;
+    }
+    setChecklistSubmitting(true);
+    setError(null);
+
+    try {
+      await apiRequest(`/v1/projects/${selectedId}/checklist-items`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: checklistForm.title,
+          project_phase_id: checklistForm.project_phase_id ? Number(checklistForm.project_phase_id) : null,
+          description: checklistForm.description || null,
+          status: checklistForm.status,
+        }),
+      });
+      setChecklistForm({
+        title: "",
+        project_phase_id: "",
+        description: "",
+        status: "pending",
+      });
+      await loadChecklistItems(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao criar item de checklist.");
+    } finally {
+      setChecklistSubmitting(false);
+    }
+  }
+
+  async function updateChecklistStatus(itemId: number, status: "blocked" | "done") {
+    if (selectedId === null) {
+      return;
+    }
+    try {
+      await apiRequest(`/v1/projects/${selectedId}/checklist-items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await loadChecklistItems(selectedId);
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : "Falha ao atualizar checklist do projeto.");
     }
   }
 
@@ -494,6 +592,9 @@ export function ProjectsPage() {
           <button className={projectView === "fases" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setProjectView("fases")} type="button">
             Fases
           </button>
+          <button className={projectView === "checklist" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setProjectView("checklist")} type="button">
+            Checklist
+          </button>
           <button className={projectView === "tarefas" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setProjectView("tarefas")} type="button">
             Tarefas
           </button>
@@ -555,6 +656,7 @@ export function ProjectsPage() {
 
               <div className="detail-meta">
                 <span>{safePhases.length} fase(s)</span>
+                <span>{checklistStats.total} checklist(s)</span>
                 <span>{taskStats.total} tarefa(s)</span>
                 <span>{unassignedTasks.length} sem fase</span>
                 <span>{safeProjectHistory.length} evento(s) de histórico</span>
@@ -729,6 +831,152 @@ export function ProjectsPage() {
                     ))}
                     {safeTasks.length === 0 && <li className="task-empty">Nenhuma tarefa cadastrada para este projeto.</li>}
                   </ul>
+                </div>
+              )}
+
+              {projectView === "checklist" && (
+                <div className="detail-section">
+                  <div className="section-heading">
+                    <span className="eyebrow">Checklist</span>
+                    <h3>Critérios operacionais da entrega</h3>
+                  </div>
+
+                  <form className="form-card compact-form" onSubmit={handleChecklistSubmit}>
+                    <label className="field">
+                      <span>Item</span>
+                      <input
+                        value={checklistForm.title}
+                        onChange={(event) => setChecklistForm((current) => ({ ...current, title: event.target.value }))}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Descrição</span>
+                      <textarea
+                        value={checklistForm.description}
+                        onChange={(event) => setChecklistForm((current) => ({ ...current, description: event.target.value }))}
+                      />
+                    </label>
+                    <div className="task-form-grid task-form-grid-2">
+                      <label className="field">
+                        <span>Fase</span>
+                        <select
+                          value={checklistForm.project_phase_id}
+                          onChange={(event) => setChecklistForm((current) => ({ ...current, project_phase_id: event.target.value }))}
+                        >
+                          <option value="">Sem fase vinculada</option>
+                          {safePhases.map((phase) => (
+                            <option key={phase.id} value={phase.id}>
+                              {phase.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Status</span>
+                        <select
+                          value={checklistForm.status}
+                          onChange={(event) => setChecklistForm((current) => ({ ...current, status: event.target.value }))}
+                        >
+                          <option value="pending">Pendente</option>
+                          <option value="blocked">Bloqueado</option>
+                          <option value="done">Concluído</option>
+                        </select>
+                      </label>
+                    </div>
+                    <button className="primary-button" disabled={checklistSubmitting} type="submit">
+                      {checklistSubmitting ? "Salvando item..." : "Adicionar item"}
+                    </button>
+                  </form>
+
+                  <div className="checklist-summary-grid">
+                    <div className="metric-card">
+                      <span>Total</span>
+                      <strong>{checklistStats.total}</strong>
+                      <small>critérios do projeto</small>
+                    </div>
+                    <div className="metric-card">
+                      <span>Pendentes</span>
+                      <strong>{checklistStats.pending}</strong>
+                      <small>itens em aberto</small>
+                    </div>
+                    <div className="metric-card">
+                      <span>Bloqueados</span>
+                      <strong>{checklistStats.blocked}</strong>
+                      <small>pedem decisão</small>
+                    </div>
+                    <div className="metric-card">
+                      <span>Concluídos</span>
+                      <strong>{checklistStats.done}</strong>
+                      <small>itens atendidos</small>
+                    </div>
+                  </div>
+
+                  <div className="phase-grid">
+                    {safePhases.map((phase) => {
+                      const itemsForPhase = safeChecklistItems.filter((item) => item.project_phase_id === phase.id);
+                      return (
+                        <article key={phase.id} className="phase-card">
+                          <div className="phase-card-head">
+                            <div>
+                              <span className="eyebrow">Fase</span>
+                              <h3>{phase.name}</h3>
+                            </div>
+                            <span className={`status-pill status-${phase.status}`}>{formatProjectPhaseStatus(phase.status)}</span>
+                          </div>
+                          <ul className="phase-task-list">
+                            {itemsForPhase.map((item) => (
+                              <li key={item.id} className="checklist-row">
+                                <div>
+                                  <strong>{item.title}</strong>
+                                  <span>{item.description || "Sem descrição."}</span>
+                                </div>
+                                <div className="inline-actions">
+                                  {item.status !== "done" && (
+                                    <button className="ghost-button" onClick={() => void updateChecklistStatus(item.id, "done")} type="button">
+                                      Concluir
+                                    </button>
+                                  )}
+                                  {item.status === "pending" && (
+                                    <button className="ghost-button" onClick={() => void updateChecklistStatus(item.id, "blocked")} type="button">
+                                      Bloquear
+                                    </button>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                            {itemsForPhase.length === 0 && <li className="phase-task-empty">Sem itens nesta fase.</li>}
+                          </ul>
+                        </article>
+                      );
+                    })}
+                    <article className="phase-card phase-card-backlog">
+                      <div className="phase-card-head">
+                        <div>
+                          <span className="eyebrow">Geral</span>
+                          <h3>Sem fase</h3>
+                        </div>
+                        <span className="status-pill">{unassignedChecklistItems.length}</span>
+                      </div>
+                      <ul className="phase-task-list">
+                        {unassignedChecklistItems.map((item) => (
+                          <li key={item.id} className="checklist-row">
+                            <div>
+                              <strong>{item.title}</strong>
+                              <span>{item.description || "Sem descrição."}</span>
+                            </div>
+                            <div className="inline-actions">
+                              {item.status !== "done" && (
+                                <button className="ghost-button" onClick={() => void updateChecklistStatus(item.id, "done")} type="button">
+                                  Concluir
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                        {unassignedChecklistItems.length === 0 && <li className="phase-task-empty">Sem itens gerais.</li>}
+                      </ul>
+                    </article>
+                  </div>
                 </div>
               )}
 

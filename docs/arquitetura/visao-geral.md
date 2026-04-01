@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Optus Hub centraliza o ciclo comercial, operacional e financeiro em um unico sistema.
+Optus Hub centraliza o fluxo operacional em um unico sistema, conectando CRM, comercial, kickoff, projetos e as frentes futuras em uma sequencia unica de uso.
 
 ## Diretrizes
 
@@ -12,6 +12,11 @@ Optus Hub centraliza o ciclo comercial, operacional e financeiro em um unico sis
 - regras de negocio no backend
 - integracoes desacopladas
 - nenhuma etapa critica avanca sem validacao
+- CRM organiza entrada, qualifica e encaminha a oportunidade
+- comercial conduz proposta, aprovacao e fechamento
+- kickoff marca a passagem da venda para a entrega
+- projetos executam o combinado e absorvem o trabalho operacional
+- proximas frentes entram depois do fluxo principal estabilizado
 
 ## Macrocomponentes
 

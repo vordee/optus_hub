@@ -47,6 +47,8 @@ def test_admin_user_has_admin_role_and_permissions(db_session) -> None:
     assert "audit:read" in user.permissions
     assert "users:read" in user.permissions
     assert "roles:write" in user.permissions
+    assert "project_checklists:read" in user.permissions
+    assert "project_checklists:write" in user.permissions
 
 
 def test_change_password_updates_hash(db_session) -> None:

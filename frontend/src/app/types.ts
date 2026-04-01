@@ -230,6 +230,25 @@ export interface ProjectTaskListResponse {
   page_size: number;
 }
 
+export interface ProjectChecklistItem {
+  id: number;
+  project_id: number;
+  project_phase_id: number | null;
+  project_phase_name: string | null;
+  title: string;
+  description: string | null;
+  status: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface ProjectChecklistListResponse {
+  items: ProjectChecklistItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export type NavKey =
   | "dashboard"
   | "users"

@@ -1,6 +1,6 @@
 # Optus Hub
 
-Sistema web corporativo para gestão ponta a ponta do processo comercial, técnico, operacional e financeiro, baseado no POP.
+Sistema web corporativo para gerir o fluxo operacional ponta a ponta, da entrada no CRM ao comercial, kickoff, projetos e frentes futuras, baseado no POP.
 
 ## Status
 
@@ -17,9 +17,12 @@ O objetivo desta etapa é deixar claro:
 
 Centralizar o fluxo completo da empresa em um único sistema, com:
 
-- CRM nativo
+- CRM nativo como porta de entrada e qualificação
+- comercial como etapa de proposta, aprovação e fechamento
+- kickoff como ponte entre venda fechada e início do projeto
+- projetos como execução operacional da entrega
 - workflow por fases e aprovações
-- criação automática de projeto após fechamento comercial
+- criação automática de projeto após o fechamento comercial
 - trilha de auditoria
 - segurança por padrão
 - integrações desacopladas
@@ -37,7 +40,7 @@ Centralizar o fluxo completo da empresa em um único sistema, com:
 
 ## Fluxo principal
 
-Lead -> CRM -> Qualificação -> Diagnóstico -> Proposta -> Aprovação -> Fechamento -> Projeto -> Execução -> Testes -> Aceite -> Entrega documental -> Faturamento -> Pós-venda
+Lead -> CRM -> Qualificação -> Diagnóstico -> Comercial -> Proposta -> Aprovação -> Fechamento -> Kickoff -> Projeto -> Execução -> Testes -> Aceite -> Entrega documental -> Faturamento -> Pós-venda
 
 ## Estrutura do monorepo
 
@@ -108,7 +111,7 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 
 ### Fase 3
 
-- criação automática de projetos
+- kickoff e criação automática de projetos
 - fases
 - tarefas
 - marcos
@@ -122,6 +125,13 @@ Essa organização é transitória e deve evoluir para uma estrutura mais orient
 - fila de sincronização
 - retries
 - logs de integração
+
+### Fase 5
+
+- documentos
+- financeiro
+- indicadores
+- novas frentes dependentes do fluxo principal
 
 ## Convenções
 

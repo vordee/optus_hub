@@ -114,12 +114,17 @@ textarea {
 .nav-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .nav-group {
   display: grid;
   gap: 10px;
+}
+
+.nav-group-header {
+  display: grid;
+  gap: 4px;
 }
 
 .nav-group-title {
@@ -129,14 +134,19 @@ textarea {
   color: rgba(245, 248, 243, 0.52);
 }
 
+.nav-group-summary {
+  color: rgba(245, 248, 243, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .nav-group-items {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nav-item {
   display: flex;
-  flex-direction: column;
   align-items: start;
   gap: 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -144,7 +154,7 @@ textarea {
   background: rgba(255, 255, 255, 0.03);
   color: inherit;
   cursor: pointer;
-  padding: 14px 16px;
+  padding: 13px 16px;
   text-align: left;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
@@ -156,7 +166,6 @@ textarea {
   transform: translateY(-1px);
 }
 
-.nav-item small,
 .sidebar-footer small,
 .eyebrow,
 .permission-pill,
@@ -174,7 +183,7 @@ textarea {
 .sidebar .eyebrow,
 .hero-panel .eyebrow,
 .sidebar .brand-copy,
-.sidebar .nav-item small,
+.sidebar .nav-group-summary,
 .sidebar .sidebar-footer small {
   color: rgba(245, 248, 243, 0.72);
 }
@@ -183,9 +192,32 @@ textarea {
   color: rgba(245, 248, 243, 0.76);
 }
 
-.nav-item small,
 .sidebar-footer small {
   color: rgba(245, 248, 243, 0.72);
+}
+
+.nav-item span {
+  line-height: 1.2;
+}
+
+.checklist-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.checklist-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.checklist-row span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-soft);
 }
 
 .sidebar .nav-item.active {

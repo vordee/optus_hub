@@ -3,41 +3,25 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.time import local_now
 from app.models.project import Project
 from app.models.project_phase import ProjectPhase
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.project_repository import ProjectRepository
-from app.repositories.project_phase_repository import ProjectPhaseRepository
 from app.repositories.status_history_repository import StatusHistoryRepository
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.project_phase import ProjectPhaseUpdateRequest
+from app.services.project_phase_service import ProjectPhaseService
 
 PROJECT_STATUSES = {"planned", "active", "on_hold", "completed"}
-PROJECT_PHASE_STATUSES = {"pending", "in_progress", "blocked", "completed"}
-DEFAULT_PROJECT_PHASES = [
-    ("execution", "Execução"),
-    ("tests", "Testes"),
-    ("acceptance", "Aceite"),
-    ("documentation", "Entrega documental"),
-    ("billing", "Faturamento"),
-    ("post_sale", "Pos-venda"),
-]
-PROJECT_PHASE_TRANSITIONS = {
-    "pending": {"in_progress", "blocked"},
-    "in_progress": {"blocked", "completed"},
-    "blocked": {"in_progress"},
-    "completed": set(),
-}
 
 
 class ProjectService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.project_repository = ProjectRepository(db)
-        self.project_phase_repository = ProjectPhaseRepository(db)
+        self.project_phase_service = ProjectPhaseService(db)
         self.status_history_repository = StatusHistoryRepository(db)
         self.opportunity_repository = OpportunityRepository(db)
         self.company_repository = CompanyRepository(db)
@@ -108,7 +92,7 @@ class ProjectService:
             changed_by_email=changed_by_email,
             note="project created",
         )
-        self._ensure_default_phases(project)
+        self.project_phase_service.ensure_default_phases(project)
         return self.project_repository.save(project)
 
     def update_project(
@@ -188,7 +172,7 @@ class ProjectService:
                 kickoff_notes=self._normalize_optional(kickoff_notes),
             ),
         )
-        self._ensure_default_phases(project)
+        self.project_phase_service.ensure_default_phases(project)
         return self.project_repository.save(project)
 
     @staticmethod
@@ -213,8 +197,7 @@ class ProjectService:
         return self.status_history_repository.list_for_entity(entity_type="project", entity_id=project_id)
 
     def list_phases(self, project_id: int) -> list[ProjectPhase]:
-        self.get_project(project_id)
-        return self.project_phase_repository.list_for_project(project_id)
+        return self.project_phase_service.list_phases(project_id)
 
     def update_phase(
         self,
@@ -224,39 +207,12 @@ class ProjectService:
         *,
         changed_by_email: str | None = None,
     ) -> ProjectPhase:
-        project = self.get_project(project_id)
-        phase = self.project_phase_repository.get_by_id(phase_id)
-        if phase is None or phase.project_id != project.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project phase not found.")
-
-        next_status = self._validate_phase_status(payload.status)
-        if next_status != phase.status and next_status not in PROJECT_PHASE_TRANSITIONS[phase.status]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid project phase transition.")
-
-        previous_status = phase.status
-        phase.status = next_status
-        phase.notes = self._normalize_optional(payload.notes)
-        if next_status == "in_progress" and phase.started_at is None:
-            phase.started_at = local_now()
-        if next_status == "completed":
-            if phase.started_at is None:
-                phase.started_at = local_now()
-            phase.completed_at = local_now()
-        else:
-            phase.completed_at = None
-
-        self.status_history_repository.create(
-            entity_type="project_phase",
-            entity_id=phase.id,
-            from_status=previous_status,
-            to_status=next_status,
+        return self.project_phase_service.update_phase(
+            project_id,
+            phase_id,
+            payload,
             changed_by_email=changed_by_email,
-            note=phase.key,
         )
-        self._sync_project_status_from_phases(project, changed_by_email=changed_by_email)
-        self.db.commit()
-        self.db.refresh(phase)
-        return phase
 
     def _resolve_relationships(
         self,
@@ -304,13 +260,6 @@ class ProjectService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown project status.")
         return normalized
 
-    @staticmethod
-    def _validate_phase_status(value: str) -> str:
-        normalized = value.strip().lower()
-        if normalized not in PROJECT_PHASE_STATUSES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown project phase status.")
-        return normalized
-
     def _validate_status_filter(self, value: str | None) -> str | None:
         if value is None:
             return None
@@ -325,49 +274,3 @@ class ProjectService:
             return None
         normalized = value.strip()
         return normalized or None
-
-    def _ensure_default_phases(self, project: Project) -> None:
-        existing_items = self.project_phase_repository.list_for_project(project.id)
-        if existing_items:
-            return
-        for sequence, (key, name) in enumerate(DEFAULT_PROJECT_PHASES, start=1):
-            self.project_phase_repository.create(
-                project_id=project.id,
-                key=key,
-                name=name,
-                sequence=sequence,
-                status="pending",
-            )
-
-    def _sync_project_status_from_phases(
-        self,
-        project: Project,
-        *,
-        changed_by_email: str | None = None,
-    ) -> None:
-        phases = self.project_phase_repository.list_for_project(project.id)
-        if not phases:
-            return
-
-        previous_status = project.status
-        next_status = previous_status
-        phase_statuses = {item.status for item in phases}
-        if all(item.status == "completed" for item in phases):
-            next_status = "completed"
-        elif "blocked" in phase_statuses:
-            next_status = "on_hold"
-        elif "in_progress" in phase_statuses:
-            next_status = "active"
-        else:
-            next_status = "planned"
-
-        if next_status != previous_status:
-            project.status = next_status
-            self.status_history_repository.create(
-                entity_type="project",
-                entity_id=project.id,
-                from_status=previous_status,
-                to_status=next_status,
-                changed_by_email=changed_by_email,
-                note="project status synced from phases",
-            )

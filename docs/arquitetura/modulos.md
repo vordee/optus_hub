@@ -10,9 +10,12 @@
 - contatos
 - leads
 - oportunidades
+- CRM como porta de entrada do fluxo
 
-## Modulos dependentes do workflow
+## Modulos dependentes do workflow comercial
 
+- comercial
+- kickoff
 - aprovacoes
 - checklists
 - historico de transicoes
@@ -24,6 +27,7 @@
 - financeiro
 - integracoes externas
 - indicadores
+- novas frentes operacionais que dependam da maturidade do fluxo principal
 
 ## Observacao arquitetural
 

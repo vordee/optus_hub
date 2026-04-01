@@ -10,10 +10,11 @@ from app.schemas.project import (
     ProjectResponse,
     ProjectUpdateRequest,
 )
-from app.schemas.project_phase import ProjectPhaseResponse, ProjectPhaseUpdateRequest
 from app.schemas.status_history import StatusHistoryResponse
 from app.services.audit_service import AuditService
 from app.services.project_service import ProjectService
+from app.services.project_phase_service import ProjectPhaseService
+from app.api.v1.project_phases import serialize_project_phase
 
 router = APIRouter()
 
@@ -49,21 +50,6 @@ def serialize_status_history(item) -> StatusHistoryResponse:
     )
 
 
-def serialize_project_phase(phase) -> ProjectPhaseResponse:
-    return ProjectPhaseResponse(
-        id=phase.id,
-        project_id=phase.project_id,
-        key=phase.key,
-        name=phase.name,
-        sequence=phase.sequence,
-        status=phase.status,
-        notes=phase.notes,
-        started_at=phase.started_at,
-        completed_at=phase.completed_at,
-        created_at=phase.created_at,
-    )
-
-
 @router.get("/projects", response_model=ProjectListResponse, dependencies=[Depends(require_permission("projects:read"))])
 def list_projects(
     query: str | None = Query(default=None),
@@ -85,10 +71,12 @@ def list_projects(
 def get_project(project_id: int) -> ProjectDetailResponse:
     with SessionLocal() as db:
         service = ProjectService(db)
+        phase_service = ProjectPhaseService(db)
         project = service.get_project_detail(project_id)
+        phase_metrics = phase_service.list_phase_metrics(project_id)
         return ProjectDetailResponse(
             **serialize_project(project).model_dump(),
-            phases=[serialize_project_phase(item) for item in project.phases],
+            phases=[serialize_project_phase(item, phase_metrics.get(item.id)) for item in project.phases],
             history=[serialize_status_history(item) for item in service.list_status_history(project_id)],
         )
 
@@ -118,38 +106,6 @@ def create_project(
             },
         )
         return serialize_project(project)
-
-
-@router.patch(
-    "/projects/{project_id}/phases/{phase_id}",
-    response_model=ProjectPhaseResponse,
-    dependencies=[Depends(require_permission("projects:write"))],
-)
-def update_project_phase(
-    project_id: int,
-    phase_id: int,
-    payload: ProjectPhaseUpdateRequest,
-    request: Request,
-    current_user_email: str = Depends(get_current_user_email),
-) -> ProjectPhaseResponse:
-    with SessionLocal() as db:
-        phase = ProjectService(db).update_phase(
-            project_id,
-            phase_id,
-            payload,
-            changed_by_email=current_user_email,
-        )
-        AuditService(db).record_event(
-            action="project.phase.update",
-            status="success",
-            actor_email=current_user_email,
-            target_type="project_phase",
-            target_id=str(phase.id),
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-            details={"project_id": project_id, "phase_key": phase.key, "status": phase.status},
-        )
-        return serialize_project_phase(phase)
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectResponse, dependencies=[Depends(require_permission("projects:write"))])

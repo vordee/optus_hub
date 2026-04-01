@@ -24,20 +24,49 @@ interface SessionState {
 interface NavItem {
   key: NavKey;
   label: string;
-  group: string;
   description: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard", label: "Visão geral", group: "Visão Geral", description: "Estado atual da plataforma e atalhos de trabalho." },
-  { key: "users", label: "Usuários", group: "Administração", description: "Contas, acessos e vínculo de papéis." },
-  { key: "roles", label: "Papéis", group: "Administração", description: "Permissões e controle de acesso." },
-  { key: "audit", label: "Auditoria", group: "Administração", description: "Eventos sensíveis e trilha operacional." },
-  { key: "companies", label: "Empresas", group: "CRM", description: "Cadastro base do relacionamento comercial." },
-  { key: "contacts", label: "Contatos", group: "CRM", description: "Pessoas vinculadas às contas." },
-  { key: "leads", label: "Leads", group: "CRM", description: "Entrada e qualificação de demanda." },
-  { key: "opportunities", label: "Oportunidades", group: "CRM", description: "Pipeline comercial e fechamento." },
-  { key: "projects", label: "Projetos", group: "Operação", description: "Entrega operacional iniciada a partir do funil." },
+interface NavSection {
+  title: string;
+  summary: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Painel",
+    summary: "Leitura rápida da operação e atalhos de decisão.",
+    items: [
+      { key: "dashboard", label: "Visão geral", description: "Estado atual da plataforma e atalhos de trabalho." },
+    ],
+  },
+  {
+    title: "Fluxo comercial",
+    summary: "Da entrada ao avanço do relacionamento.",
+    items: [
+      { key: "leads", label: "Leads", description: "Entrada e qualificação de demanda." },
+      { key: "opportunities", label: "Oportunidades", description: "Pipeline comercial e fechamento." },
+      { key: "companies", label: "Empresas", description: "Cadastro base do relacionamento comercial." },
+      { key: "contacts", label: "Contatos", description: "Pessoas vinculadas às contas." },
+    ],
+  },
+  {
+    title: "Entrega",
+    summary: "Execução e acompanhamento do que foi vendido.",
+    items: [
+      { key: "projects", label: "Projetos", description: "Entrega operacional iniciada a partir do funil." },
+    ],
+  },
+  {
+    title: "Governança",
+    summary: "Acesso, papéis e trilha operacional.",
+    items: [
+      { key: "users", label: "Usuários", description: "Contas, acessos e vínculo de papéis." },
+      { key: "roles", label: "Papéis", description: "Permissões e controle de acesso." },
+      { key: "audit", label: "Auditoria", description: "Eventos sensíveis e trilha operacional." },
+    ],
+  },
 ];
 
 export function App() {
@@ -47,16 +76,7 @@ export function App() {
     error: null,
   });
   const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
-  const activeItem = NAV_ITEMS.find((item) => item.key === activeNav);
-  const navGroups = NAV_ITEMS.reduce<Array<{ group: string; items: NavItem[] }>>((groups, item) => {
-    const currentGroup = groups.find((entry) => entry.group === item.group);
-    if (currentGroup) {
-      currentGroup.items.push(item);
-      return groups;
-    }
-    groups.push({ group: item.group, items: [item] });
-    return groups;
-  }, []);
+  const activeItem = NAV_SECTIONS.flatMap((section) => section.items).find((item) => item.key === activeNav);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -119,11 +139,14 @@ export function App() {
         </div>
 
         <nav className="nav-list">
-          {navGroups.map((group) => (
-            <div key={group.group} className="nav-group">
-              <span className="nav-group-title">{group.group}</span>
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title} className="nav-group">
+              <div className="nav-group-header">
+                <span className="nav-group-title">{section.title}</span>
+                <span className="nav-group-summary">{section.summary}</span>
+              </div>
               <div className="nav-group-items">
-                {group.items.map((item) => (
+                {section.items.map((item) => (
                   <button
                     key={item.key}
                     className={item.key === activeNav ? "nav-item active" : "nav-item"}
@@ -131,7 +154,6 @@ export function App() {
                     type="button"
                   >
                     <span>{item.label}</span>
-                    <small>{item.description}</small>
                   </button>
                 ))}
               </div>

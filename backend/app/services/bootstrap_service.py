@@ -18,6 +18,8 @@ DEFAULT_PERMISSIONS = {
     "opportunities:write": "Criar e gerenciar oportunidades.",
     "projects:read": "Listar projetos.",
     "projects:write": "Criar e gerenciar projetos.",
+    "project_checklists:read": "Listar checklist de projetos.",
+    "project_checklists:write": "Criar e gerenciar checklist de projetos.",
     "project_tasks:read": "Listar tarefas de projeto.",
     "project_tasks:write": "Criar e gerenciar tarefas de projeto.",
     "users:read": "Listar usuários.",
