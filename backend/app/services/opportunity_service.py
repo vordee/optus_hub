@@ -43,6 +43,7 @@ class OpportunityService:
         sort_by: str = "created_at",
         sort_direction: str = "desc",
         saved_view_id: int | None = None,
+        current_user_email: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Opportunity], int]:
@@ -56,6 +57,7 @@ class OpportunityService:
             sort_by=sort_by,
             sort_direction=sort_direction,
             saved_view_id=saved_view_id,
+            current_user_email=current_user_email,
         )
         items = self.opportunity_repository.list_filtered(page=page, page_size=page_size, **filters, **sort_options)
         total = self.opportunity_repository.count_filtered(**filters)
@@ -275,9 +277,10 @@ class OpportunityService:
         sort_by: str,
         sort_direction: str,
         saved_view_id: int | None,
+        current_user_email: str | None,
     ) -> tuple[dict[str, object], dict[str, object]]:
         if saved_view_id is not None:
-            view = SavedViewService(self.db).get_view(saved_view_id, module=module)
+            view = SavedViewService(self.db).get_view(saved_view_id, module=module, created_by_email=current_user_email)
             filters, sort_options = self._normalize_view_filters(
                 module=module,
                 filters=view.filters_json,

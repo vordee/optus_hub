@@ -53,6 +53,7 @@ def list_leads(
     saved_view_id: int | None = Query(default=None, ge=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
+    current_user_email: str = Depends(get_current_user_email),
 ) -> LeadListResponse:
     with SessionLocal() as db:
         items, total = LeadService(db).list_leads(
@@ -64,6 +65,7 @@ def list_leads(
             sort_by=sort_by,
             sort_direction=sort_direction,
             saved_view_id=saved_view_id,
+            current_user_email=current_user_email,
             page=page,
             page_size=page_size,
         )
