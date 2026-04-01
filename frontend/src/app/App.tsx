@@ -24,7 +24,7 @@ interface SessionState {
 interface NavItem {
   key: NavKey;
   label: string;
-  shortLabel: string;
+  icon: IconName;
   description: string;
 }
 
@@ -34,38 +34,52 @@ interface NavSection {
   items: NavItem[];
 }
 
+type IconName =
+  | "dashboard"
+  | "companies"
+  | "contacts"
+  | "leads"
+  | "opportunities"
+  | "projects"
+  | "users"
+  | "roles"
+  | "audit"
+  | "sidebar-open"
+  | "sidebar-close"
+  | "logout";
+
 const NAV_SECTIONS: NavSection[] = [
   {
     title: "Painel",
     summary: "Acompanhamento executivo e leitura rápida da operação.",
     items: [
-      { key: "dashboard", label: "Visão geral", shortLabel: "VG", description: "Estado atual da plataforma e atalhos de trabalho." },
+      { key: "dashboard", label: "Visão geral", icon: "dashboard", description: "Estado atual da plataforma e atalhos de trabalho." },
     ],
   },
   {
     title: "Fluxo comercial",
     summary: "Base do CRM, qualificação e negociação até o fechamento.",
     items: [
-      { key: "companies", label: "Empresas", shortLabel: "EM", description: "Contas e base relacional do CRM." },
-      { key: "contacts", label: "Contatos", shortLabel: "CT", description: "Pessoas vinculadas às contas e seus canais." },
-      { key: "leads", label: "Leads", shortLabel: "LD", description: "Entrada, qualificação e leitura comercial da demanda." },
-      { key: "opportunities", label: "Oportunidades", shortLabel: "OP", description: "Negociação, transição e fechamento comercial." },
+      { key: "companies", label: "Empresas", icon: "companies", description: "Contas e base relacional do CRM." },
+      { key: "contacts", label: "Contatos", icon: "contacts", description: "Pessoas vinculadas às contas e seus canais." },
+      { key: "leads", label: "Leads", icon: "leads", description: "Entrada, qualificação e leitura comercial da demanda." },
+      { key: "opportunities", label: "Oportunidades", icon: "opportunities", description: "Negociação, transição e fechamento comercial." },
     ],
   },
   {
     title: "Entrega",
     summary: "Kickoff e execução operacional do que foi vendido.",
     items: [
-      { key: "projects", label: "Projetos", shortLabel: "PJ", description: "Entrega operacional iniciada a partir do funil." },
+      { key: "projects", label: "Projetos", icon: "projects", description: "Entrega operacional iniciada a partir do funil." },
     ],
   },
   {
     title: "Governança",
     summary: "Acesso, papéis e trilha de controle do sistema.",
     items: [
-      { key: "users", label: "Usuários", shortLabel: "US", description: "Contas, acessos e vínculo de papéis." },
-      { key: "roles", label: "Papéis", shortLabel: "PP", description: "Permissões e controle de acesso." },
-      { key: "audit", label: "Auditoria", shortLabel: "AU", description: "Eventos sensíveis e trilha operacional." },
+      { key: "users", label: "Usuários", icon: "users", description: "Contas, acessos e vínculo de papéis." },
+      { key: "roles", label: "Papéis", icon: "roles", description: "Permissões e controle de acesso." },
+      { key: "audit", label: "Auditoria", icon: "audit", description: "Eventos sensíveis e trilha operacional." },
     ],
   },
 ];
@@ -75,6 +89,46 @@ const NAV_KEYS = new Set<NavKey>(NAV_SECTIONS.flatMap((section) => section.items
 function getNavFromHash(hash: string): NavKey | null {
   const candidate = hash.replace(/^#/, "");
   return NAV_KEYS.has(candidate as NavKey) ? (candidate as NavKey) : null;
+}
+
+function AppIcon({ name }: { name: IconName }) {
+  const commonProps = {
+    className: "app-icon-svg",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (name) {
+    case "dashboard":
+      return <svg {...commonProps}><path d="M4 5h7v6H4zM13 5h7v10h-7zM4 13h7v6H4zM13 17h7v2h-7z" /></svg>;
+    case "companies":
+      return <svg {...commonProps}><path d="M4 20V6l8-3 8 3v14" /><path d="M9 20v-4h6v4" /><path d="M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01" /></svg>;
+    case "contacts":
+      return <svg {...commonProps}><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M20 8v6" /><path d="M23 11h-6" /></svg>;
+    case "leads":
+      return <svg {...commonProps}><path d="m4 12 5 5L20 6" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>;
+    case "opportunities":
+      return <svg {...commonProps}><path d="M4 19h16" /><path d="M7 16V9" /><path d="M12 16V5" /><path d="M17 16v-3" /></svg>;
+    case "projects":
+      return <svg {...commonProps}><path d="M3 7h18" /><path d="M7 3v4" /><path d="M17 3v4" /><rect x="4" y="5" width="16" height="16" rx="2" /><path d="M8 11h8M8 15h5" /></svg>;
+    case "users":
+      return <svg {...commonProps}><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+    case "roles":
+      return <svg {...commonProps}><path d="m12 2 7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4Z" /><path d="m9 12 2 2 4-4" /></svg>;
+    case "audit":
+      return <svg {...commonProps}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /><path d="M11 8v3l2 2" /></svg>;
+    case "sidebar-open":
+      return <svg {...commonProps}><path d="M4 5h16v14H4z" /><path d="M9 5v14" /><path d="m13 12 3-3" /><path d="m13 12 3 3" /></svg>;
+    case "sidebar-close":
+      return <svg {...commonProps}><path d="M4 5h16v14H4z" /><path d="M15 5v14" /><path d="m11 12-3-3" /><path d="m11 12-3 3" /></svg>;
+    case "logout":
+      return <svg {...commonProps}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>;
+  }
 }
 
 export function App() {
@@ -171,11 +225,13 @@ export function App() {
         <button
           aria-controls="sidebar-navigation"
           aria-expanded={!sidebarCollapsed}
+          aria-label={sidebarCollapsed ? "Abrir menu" : "Recolher menu"}
           className="ghost-button sidebar-toggle"
           onClick={() => setSidebarCollapsed((current) => !current)}
+          title={sidebarCollapsed ? "Abrir menu" : "Recolher menu"}
           type="button"
         >
-          {sidebarCollapsed ? "Abrir menu" : "Recolher menu"}
+          <AppIcon name={sidebarCollapsed ? "sidebar-open" : "sidebar-close"} />
         </button>
 
         <nav aria-label="Navegação principal" className="nav-list" id="sidebar-navigation">
@@ -197,7 +253,10 @@ export function App() {
                     title={item.label}
                     type="button"
                   >
-                    <span className="nav-item-label">{sidebarCollapsed ? item.shortLabel : item.label}</span>
+                    <span className="nav-item-content">
+                      <span className="nav-item-icon"><AppIcon name={item.icon} /></span>
+                      {!sidebarCollapsed && <span className="nav-item-label">{item.label}</span>}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -212,8 +271,15 @@ export function App() {
               <small>{session.user.email}</small>
             </div>
           )}
-          <button className="ghost-button" onClick={handleLogout} type="button">
-            Sair
+          <button
+            aria-label="Sair"
+            className="ghost-button button-with-icon"
+            onClick={handleLogout}
+            title="Sair"
+            type="button"
+          >
+            <AppIcon name="logout" />
+            {!sidebarCollapsed && <span>Sair</span>}
           </button>
         </div>
       </aside>

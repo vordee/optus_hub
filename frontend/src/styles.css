@@ -168,17 +168,48 @@ textarea {
 }
 
 .sidebar-toggle {
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  padding: 0;
+  align-self: center;
+  border-radius: 14px;
+}
+
+.nav-item-content,
+.button-with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.nav-item-content {
   width: 100%;
+}
+
+.nav-item-icon,
+.button-with-icon .app-icon-svg {
+  flex: 0 0 auto;
+}
+
+.nav-item-icon {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 }
 
 .nav-item-label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 2ch;
+  justify-content: flex-start;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.app-icon-svg {
+  width: 18px;
+  height: 18px;
 }
 
 .nav-item:hover,
@@ -255,6 +286,40 @@ tbody tr[role="button"]:focus-visible {
   background: linear-gradient(135deg, rgba(31, 90, 145, 0.32), rgba(31, 90, 145, 0.1));
   border-color: rgba(109, 159, 204, 0.4);
   box-shadow: inset 0 0 0 1px rgba(147, 185, 220, 0.14);
+}
+
+.app-frame.sidebar-collapsed .sidebar {
+  align-items: center;
+}
+
+.app-frame.sidebar-collapsed .brand-logo-surface {
+  padding: 8px;
+}
+
+.app-frame.sidebar-collapsed .brand-logo {
+  width: 46px;
+}
+
+.app-frame.sidebar-collapsed .nav-list,
+.app-frame.sidebar-collapsed .nav-group,
+.app-frame.sidebar-collapsed .nav-group-items {
+  width: 100%;
+}
+
+.app-frame.sidebar-collapsed .nav-item {
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+}
+
+.app-frame.sidebar-collapsed .nav-item-content,
+.app-frame.sidebar-collapsed .button-with-icon {
+  gap: 0;
+}
+
+.app-frame.sidebar-collapsed .sidebar-footer {
+  width: 100%;
+  justify-content: center;
 }
 
 .sidebar-footer {
@@ -1090,6 +1155,10 @@ tbody tr[role="button"]:focus-visible td {
 .ghost-button {
   border-radius: 16px;
   padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
