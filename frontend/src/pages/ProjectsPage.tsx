@@ -83,7 +83,9 @@ export function ProjectsPage() {
   const [auxiliaryError, setAuxiliaryError] = useState<string | null>(null);
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
   const [checklistProjectId, setChecklistProjectId] = useState<number | null>(null);
+  const [checklistLoaded, setChecklistLoaded] = useState(false);
   const [tasksProjectId, setTasksProjectId] = useState<number | null>(null);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
   const [projectView, setProjectView] = useState<"visao" | "fases" | "checklist" | "tarefas" | "historico" | "cadastro">("visao");
   const [form, setForm] = useState({
     opportunity_id: "",
@@ -158,6 +160,9 @@ export function ProjectsPage() {
   const selectedProgress =
     phaseStats && phaseStats.total > 0 ? Math.round((phaseStats.completed / phaseStats.total) * 100) : 0;
   const selectedOpportunity = safeOpportunities.find((item) => String(item.id) === form.opportunity_id) || null;
+  const taskMetricsReady = selectedId !== null && tasksProjectId === selectedId && tasksLoaded;
+  const checklistMetricsReady = selectedId !== null && checklistProjectId === selectedId && checklistLoaded;
+  const activePhaseName = safePhases.find((phase) => phase.status === "active")?.name || null;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 250);
@@ -234,13 +239,24 @@ export function ProjectsPage() {
     }
   }
 
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: ProjectItem) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    populate(item);
+  }
+
   function populate(item: ProjectItem) {
     setSelectedId(item.id);
     setProjectView("visao");
     setChecklistItems([]);
     setChecklistProjectId(null);
+    setChecklistLoaded(false);
     setTasks([]);
     setTasksProjectId(null);
+    setTasksLoaded(false);
     setSelectedDetail(null);
     setForm({
       opportunity_id: item.opportunity_id ? String(item.opportunity_id) : "",
@@ -253,7 +269,7 @@ export function ProjectsPage() {
       kickoff_target_date: item.kickoff_target_date || "",
       kickoff_notes: item.kickoff_notes || "",
     });
-    void loadDetail(item.id);
+    void Promise.allSettled([loadDetail(item.id), loadTasks(item.id), loadChecklistItems(item.id)]);
   }
 
   async function loadDetail(projectId: number) {
@@ -274,7 +290,9 @@ export function ProjectsPage() {
       );
       setTasks(Array.isArray(taskItems) ? ensureArray(taskItems) : ensureArray(taskItems?.items));
       setTasksProjectId(projectId);
+      setTasksLoaded(true);
     } catch (loadError) {
+      setTasksLoaded(false);
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar tarefas do projeto.");
     }
   }
@@ -287,7 +305,9 @@ export function ProjectsPage() {
       );
       setChecklistItems(Array.isArray(response) ? ensureArray(response) : ensureArray(response?.items));
       setChecklistProjectId(projectId);
+      setChecklistLoaded(true);
     } catch (loadError) {
+      setChecklistLoaded(false);
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar checklist do projeto.");
     }
   }
@@ -556,7 +576,15 @@ export function ProjectsPage() {
             </thead>
             <tbody>
               {safeItems.map((item) => (
-                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
+                <tr
+                  key={item.id}
+                  aria-selected={selectedId === item.id}
+                  className={selectedId === item.id ? "selected-row" : ""}
+                  onClick={() => populate(item)}
+                  onKeyDown={(event) => handleRowKeyDown(event, item)}
+                  role="button"
+                  tabIndex={0}
+                >
                   <td>{item.name}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>
@@ -585,7 +613,7 @@ export function ProjectsPage() {
       </article>
 
       <article className="card">
-        <div className="panel-switcher panel-switcher-wrap">
+        <div className="panel-switcher panel-switcher-wrap panel-switcher-compact">
           <button className={projectView === "visao" ? "ghost-button active-toggle" : "ghost-button"} onClick={() => setProjectView("visao")} type="button">
             Visão
           </button>
@@ -616,7 +644,7 @@ export function ProjectsPage() {
           </div>
           {selectedDetail ? (
             <>
-              <div className="detail-hero">
+              <div className="detail-hero detail-hero-compact">
                 <div className="detail-badges">
                   <span className={`status-pill status-${selectedDetail.status}`}>{formatProjectStatus(selectedDetail.status)}</span>
                   <span className="status-pill detail-source">
@@ -631,7 +659,7 @@ export function ProjectsPage() {
                 <p>{selectedDetail.description || "Sem descrição."}</p>
               </div>
 
-              <div className="project-metrics">
+              <div className="project-metrics compact-summary-grid">
                 <div className="metric-card">
                   <span>Fases</span>
                   <strong>{phaseStats ? `${phaseStats.completed}/${phaseStats.total}` : "0/0"}</strong>
@@ -639,61 +667,56 @@ export function ProjectsPage() {
                 </div>
                 <div className="metric-card">
                   <span>Tarefas</span>
-                  <strong>{taskStats.total}</strong>
-                  <small>{taskStats.pending} pendentes</small>
+                  <strong>{taskMetricsReady ? taskStats.total : "—"}</strong>
+                  <small>{taskMetricsReady ? `${taskStats.pending} pendentes` : "abra a aba Tarefas para carregar"}</small>
                 </div>
                 <div className="metric-card">
                   <span>Execução</span>
-                  <strong>{taskStats.inProgress + taskStats.blocked}</strong>
-                  <small>{taskStats.blocked} bloqueadas</small>
+                  <strong>{taskMetricsReady ? taskStats.inProgress + taskStats.blocked : "—"}</strong>
+                  <small>{taskMetricsReady ? `${taskStats.blocked} bloqueadas` : "aguardando leitura das tarefas"}</small>
                 </div>
                 <div className="metric-card">
                   <span>Risco</span>
-                  <strong>{taskStats.overdue}</strong>
-                  <small>{taskStats.done} concluídas</small>
+                  <strong>{taskMetricsReady ? taskStats.overdue : "—"}</strong>
+                  <small>{taskMetricsReady ? `${taskStats.done} concluídas` : "sem dados de tarefas ainda"}</small>
                 </div>
               </div>
 
-              <div className="detail-meta">
+              <div className="detail-meta detail-meta-compact">
                 <span>{safePhases.length} fase(s)</span>
-                <span>{checklistStats.total} checklist(s)</span>
-                <span>{taskStats.total} tarefa(s)</span>
-                <span>{unassignedTasks.length} sem fase</span>
+                <span>{checklistMetricsReady ? checklistStats.total : "—"} checklist(s)</span>
+                <span>{taskMetricsReady ? taskStats.total : "—"} tarefa(s)</span>
+                <span>{taskMetricsReady ? unassignedTasks.length : "—"} sem fase</span>
                 <span>{safeProjectHistory.length} evento(s) de histórico</span>
               </div>
 
               {projectView === "visao" && (
                 <>
-                  <div className="detail-section">
-                    <div className="section-heading">
-                      <span className="eyebrow">Kickoff</span>
-                      <h3>Responsabilidade inicial</h3>
-                    </div>
-                    <div className="kickoff-card">
-                      <div className="detail-meta detail-meta-dense">
-                        <span>{selectedDetail.kickoff_owner_email || "Sem responsável"}</span>
-                        <span>{formatDateOnly(selectedDetail.kickoff_target_date)}</span>
+                  <div className="detail-section detail-section-compact">
+                    <div className="project-overview-grid">
+                      <div className="helper-card">
+                        <strong>Responsável inicial</strong>
+                        <p>{selectedDetail.kickoff_owner_email || "Sem responsável definido."}</p>
+                        <small>{formatDateOnly(selectedDetail.kickoff_target_date)}</small>
                       </div>
-                      <p>{selectedDetail.kickoff_notes || "Sem notas iniciais de kickoff."}</p>
-                    </div>
-                  </div>
-                  <div className="detail-section">
-                    <div className="cockpit-grid">
                       <div className="helper-card">
                         <strong>Situação atual</strong>
                         <p>
-                          {taskStats.overdue > 0
+                          {taskMetricsReady && taskStats.overdue > 0
                             ? `${taskStats.overdue} tarefa(s) em risco pedem atenção imediata.`
                             : "Nenhuma tarefa atrasada neste momento."}
                         </p>
+                        <small>{taskMetricsReady ? `${taskStats.pending} pendentes no recorte atual` : "Tarefas em carregamento"}</small>
                       </div>
                       <div className="helper-card">
                         <strong>Próximo foco</strong>
-                        <p>
-                          {safePhases.find((phase) => phase.status === "active")?.name ||
-                            "Ative a próxima fase para orientar a execução."}
-                        </p>
+                        <p>{activePhaseName || "Ative a próxima fase para orientar a execução."}</p>
+                        <small>{phaseStats ? `${phaseStats.total} fase(s) mapeadas` : "Sem fases registradas"}</small>
                       </div>
+                    </div>
+                    <div className="kickoff-card kickoff-card-compact">
+                      <strong>Notas de kickoff</strong>
+                      <p>{selectedDetail.kickoff_notes || "Sem notas iniciais de kickoff."}</p>
                     </div>
                   </div>
                 </>
@@ -742,7 +765,7 @@ export function ProjectsPage() {
                     <span className="eyebrow">Tarefas</span>
                     <h3>Execução do projeto</h3>
                   </div>
-                  <form className="form-card compact-form" onSubmit={handleTaskSubmit}>
+                  <form className="form-card compact-form compact-form-shell" onSubmit={handleTaskSubmit}>
                     <label className="field">
                       <span>Título da tarefa</span>
                       <input value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} />
@@ -804,7 +827,7 @@ export function ProjectsPage() {
                     </button>
                   </form>
 
-                  <ul className="task-list">
+                  <ul className="task-list task-list-compact">
                     {safeTasks.map((task) => (
                       <li key={task.id} className="task-item">
                         <div className="task-item-main">
@@ -841,7 +864,7 @@ export function ProjectsPage() {
                     <h3>Critérios operacionais da entrega</h3>
                   </div>
 
-                  <form className="form-card compact-form" onSubmit={handleChecklistSubmit}>
+                  <form className="form-card compact-form compact-form-shell" onSubmit={handleChecklistSubmit}>
                     <label className="field">
                       <span>Item</span>
                       <input

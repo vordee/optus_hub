@@ -69,13 +69,20 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+const NAV_KEYS = new Set<NavKey>(NAV_SECTIONS.flatMap((section) => section.items.map((item) => item.key)));
+
+function getNavFromHash(hash: string): NavKey | null {
+  const candidate = hash.replace(/^#/, "");
+  return NAV_KEYS.has(candidate as NavKey) ? (candidate as NavKey) : null;
+}
+
 export function App() {
   const [session, setSession] = useState<SessionState>({
     loading: true,
     user: null,
     error: null,
   });
-  const [activeNav, setActiveNav] = useState<NavKey>("dashboard");
+  const [activeNav, setActiveNav] = useState<NavKey>(() => getNavFromHash(window.location.hash) || "dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const activeItem = NAV_SECTIONS.flatMap((section) => section.items).find((item) => item.key === activeNav);
 
@@ -88,6 +95,25 @@ export function App() {
 
     void loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    function syncNavFromHash() {
+      const hashNav = getNavFromHash(window.location.hash);
+      if (hashNav) {
+        setActiveNav(hashNav);
+      }
+    }
+
+    window.addEventListener("hashchange", syncNavFromHash);
+    return () => window.removeEventListener("hashchange", syncNavFromHash);
+  }, []);
+
+  useEffect(() => {
+    const nextHash = `#${activeNav}`;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = activeNav;
+    }
+  }, [activeNav]);
 
   async function loadCurrentUser() {
     try {
@@ -140,6 +166,8 @@ export function App() {
         </div>
 
         <button
+          aria-controls="sidebar-navigation"
+          aria-expanded={!sidebarCollapsed}
           className="ghost-button sidebar-toggle"
           onClick={() => setSidebarCollapsed((current) => !current)}
           type="button"
@@ -147,7 +175,7 @@ export function App() {
           {sidebarCollapsed ? "Abrir menu" : "Recolher menu"}
         </button>
 
-        <nav className="nav-list">
+        <nav aria-label="Navegação principal" className="nav-list" id="sidebar-navigation">
           {NAV_SECTIONS.map((section) => (
             <div key={section.title} className="nav-group">
               {!sidebarCollapsed && (
@@ -161,6 +189,7 @@ export function App() {
                   <button
                     key={item.key}
                     className={item.key === activeNav ? "nav-item active" : "nav-item"}
+                    aria-pressed={item.key === activeNav}
                     onClick={() => setActiveNav(item.key)}
                     type="button"
                   >

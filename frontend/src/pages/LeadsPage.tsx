@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
+import { storeOpportunityDraftFromLead } from "../app/crmDrafts";
 import { formatDateTime } from "../app/format";
 import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import type { ContactItem, LeadDetailItem, LeadItem, LeadListResponse } from "../app/types";
@@ -93,6 +94,15 @@ export function LeadsPage() {
     void loadDetail(item.id);
   }
 
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: LeadItem) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    populate(item);
+  }
+
   async function loadDetail(leadId: number) {
     try {
       setError(null);
@@ -132,6 +142,21 @@ export function LeadsPage() {
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar lead.");
     }
+  }
+
+  function resetForm() {
+    setSelectedId(null);
+    setSelectedDetail(null);
+    setForm({ contact_id: "", title: "", description: "", source: "", status: "new" });
+  }
+
+  function handleCreateOpportunity() {
+    if (!selectedDetail) {
+      return;
+    }
+
+    storeOpportunityDraftFromLead(selectedDetail);
+    window.location.hash = "opportunities";
   }
 
   return (
@@ -214,6 +239,11 @@ export function LeadsPage() {
               <button className="primary-button" type="submit">
                 {selectedId === null ? "Criar lead" : "Atualizar lead"}
               </button>
+              {selectedId !== null && (
+                <button className="ghost-button" onClick={resetForm} type="button">
+                  Limpar edição
+                </button>
+              )}
             </div>
           </form>
           {selectedDetail ? (
@@ -250,6 +280,13 @@ export function LeadsPage() {
                 <div className="helper-card">
                   <strong>Contato principal</strong>
                   <p>{selectedDetail.contact_name || "Sem contato principal vinculado."}</p>
+                </div>
+                <div className="helper-card">
+                  <strong>Próximo passo comercial</strong>
+                  <p>Abra uma oportunidade pré-preenchida a partir deste lead quando o diagnóstico estiver pronto.</p>
+                  <button className="ghost-button" onClick={handleCreateOpportunity} type="button">
+                    Abrir oportunidade
+                  </button>
                 </div>
               </div>
 
@@ -347,7 +384,15 @@ export function LeadsPage() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
+                <tr
+                  key={item.id}
+                  aria-selected={selectedId === item.id}
+                  className={selectedId === item.id ? "selected-row" : ""}
+                  onClick={() => populate(item)}
+                  onKeyDown={(event) => handleRowKeyDown(event, item)}
+                  role="button"
+                  tabIndex={0}
+                >
                   <td>{item.title}</td>
                   <td>{item.company_name || "-"}</td>
                   <td>{item.contact_name || "-"}</td>

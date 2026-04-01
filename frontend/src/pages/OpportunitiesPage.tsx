@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
+import { consumeOpportunityDraft } from "../app/crmDrafts";
 import { formatCurrency, formatDateTime } from "../app/format";
 import { formatOpportunityStatus, formatProjectStatus, OPPORTUNITY_STATUSES } from "../app/labels";
 import type { LeadItem, LeadListResponse, OpportunityDetailItem, OpportunityItem, OpportunityListResponse } from "../app/types";
@@ -39,6 +40,7 @@ export function OpportunitiesPage() {
   const [transitionNote, setTransitionNote] = useState("");
   const [kickoffSubmitting, setKickoffSubmitting] = useState(false);
   const [listView, setListView] = useState<"lista" | "pipeline">("pipeline");
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [kickoffForm, setKickoffForm] = useState({
     project_name: "",
     kickoff_owner_email: "",
@@ -87,6 +89,24 @@ export function OpportunitiesPage() {
       void loadLeads();
     }
   }, [leadsLoaded, leadsLoading]);
+
+  useEffect(() => {
+    const draft = consumeOpportunityDraft();
+    if (!draft) {
+      return;
+    }
+
+    setSelectedId(null);
+    setSelectedDetail(null);
+    setForm({
+      lead_id: draft.lead_id,
+      title: draft.title,
+      description: draft.description,
+      status: "open",
+      amount: draft.amount,
+    });
+    setDraftNotice("Rascunho trazido do lead selecionado. Revise e salve a oportunidade.");
+  }, []);
 
   async function loadOpportunities() {
     try {
@@ -160,6 +180,15 @@ export function OpportunitiesPage() {
     } finally {
       setKickoffSubmitting(false);
     }
+  }
+
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: OpportunityItem) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    populate(item);
   }
 
   function populate(item: OpportunityItem) {
@@ -266,6 +295,7 @@ export function OpportunitiesPage() {
                 Cadastro compacto para criação rápida e correção cadastral.
               </p>
             </div>
+            {draftNotice && <div className="inline-note">{draftNotice}</div>}
             {leadsLoading && <div className="empty-state-panel">Carregando leads de apoio...</div>}
             <label className="field">
               <span>Lead</span>
@@ -643,8 +673,12 @@ export function OpportunitiesPage() {
                 {items.map((item) => (
                   <tr
                     key={item.id}
+                    aria-selected={selectedId === item.id}
                     className={selectedId === item.id ? "selected-row" : ""}
                     onClick={() => populate(item)}
+                    onKeyDown={(event) => handleRowKeyDown(event, item)}
+                    role="button"
+                    tabIndex={0}
                   >
                     <td>{item.title}</td>
                     <td>{item.company_name || "-"}</td>

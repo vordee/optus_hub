@@ -114,6 +114,15 @@ export function ContactsPage() {
     setForm(EMPTY_FORM);
   }
 
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: ContactItem) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    populate(item);
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -345,7 +354,15 @@ export function ContactsPage() {
               </thead>
               <tbody>
                 {filteredItems.map((item) => (
-                  <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
+                  <tr
+                    key={item.id}
+                    aria-selected={selectedId === item.id}
+                    className={selectedId === item.id ? "selected-row" : ""}
+                    onClick={() => populate(item)}
+                    onKeyDown={(event) => handleRowKeyDown(event, item)}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <td>{item.full_name}</td>
                     <td>{item.company_name || "-"}</td>
                     <td>{item.email || "-"}</td>

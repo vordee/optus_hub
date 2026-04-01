@@ -4,7 +4,16 @@ import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatOpportunityStatus } from "../app/labels";
-import type { CompanyItem, ContactItem, LeadItem, OpportunityItem, OpportunityListResponse } from "../app/types";
+import type {
+  CompanyItem,
+  ContactItem,
+  LeadItem,
+  LeadListResponse,
+  OpportunityItem,
+  OpportunityListResponse,
+} from "../app/types";
+
+const PAGE_SIZE = 100;
 
 export function CompaniesPage() {
   const [items, setItems] = useState<CompanyItem[]>([]);
@@ -30,16 +39,44 @@ export function CompaniesPage() {
       const [companyItems, contactItems, leadItems, opportunityResponse] = await Promise.all([
         apiRequest<CompanyItem[]>("/v1/crm/companies"),
         apiRequest<ContactItem[]>("/v1/crm/contacts"),
-        apiRequest<LeadItem[]>("/v1/crm/leads"),
+        loadAllLeads(),
         apiRequest<OpportunityListResponse>("/v1/crm/opportunities?page=1&page_size=100"),
       ]);
       setItems(ensureArray(companyItems));
       setContacts(ensureArray(contactItems));
-      setLeads(ensureArray(leadItems));
+      setLeads(leadItems);
       setOpportunities(ensureArray(opportunityResponse.items));
     } catch (loadError) {
       setError(loadError instanceof ApiError ? loadError.message : "Falha ao carregar empresas.");
     }
+  }
+
+  async function loadAllLeads() {
+    const collected: LeadItem[] = [];
+    let page = 1;
+    let total = 0;
+
+    while (true) {
+      const response = await apiRequest<LeadListResponse>(`/v1/crm/leads?page=${page}&page_size=${PAGE_SIZE}`);
+      const pageItems = ensureArray(response.items);
+      collected.push(...pageItems);
+      total = response.total;
+
+      if (collected.length >= total || pageItems.length < PAGE_SIZE) {
+        return collected;
+      }
+
+      page += 1;
+    }
+  }
+
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>, item: CompanyItem) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    populate(item);
   }
 
   function populate(item: CompanyItem) {
@@ -81,6 +118,11 @@ export function CompaniesPage() {
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar empresa.");
     }
+  }
+
+  function resetForm() {
+    setSelectedId(null);
+    setForm({ legal_name: "", trade_name: "", tax_id: "", is_active: true });
   }
 
   const safeItems = ensureArray(items);
@@ -152,6 +194,11 @@ export function CompaniesPage() {
               <button className="primary-button" type="submit">
                 {selectedId === null ? "Criar empresa" : "Atualizar empresa"}
               </button>
+              {selectedId !== null && (
+                <button className="ghost-button" onClick={resetForm} type="button">
+                  Limpar edição
+                </button>
+              )}
             </div>
           </form>
 
@@ -263,7 +310,15 @@ export function CompaniesPage() {
             </thead>
             <tbody>
               {safeItems.map((item) => (
-                <tr key={item.id} className={selectedId === item.id ? "selected-row" : ""} onClick={() => populate(item)}>
+                <tr
+                  key={item.id}
+                  aria-selected={selectedId === item.id}
+                  className={selectedId === item.id ? "selected-row" : ""}
+                  onClick={() => populate(item)}
+                  onKeyDown={(event) => handleRowKeyDown(event, item)}
+                  role="button"
+                  tabIndex={0}
+                >
                   <td>{item.legal_name}</td>
                   <td>{item.trade_name || "-"}</td>
                   <td>{item.contact_count}</td>
