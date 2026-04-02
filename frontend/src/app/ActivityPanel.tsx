@@ -15,6 +15,9 @@ import {
   getActivitySummary,
   loadActivities,
 } from "./activityStore";
+import { MetricCard } from "../components/tw/shared/MetricCard";
+import { SectionHeader } from "../components/tw/shared/SectionHeader";
+import { StatusPill } from "../components/tw/shared/StatusPill";
 
 type ActivityDraft = {
   activity_type: CRMActivityType;
@@ -50,6 +53,16 @@ const ACTIVITY_TYPE_LABELS: Record<CRMActivityType, string> = {
   task: "Tarefa",
   follow_up: "Follow-up",
 };
+
+function getActivityTone(status: CRMActivityItem["status"]) {
+  if (status === "done") {
+    return "success";
+  }
+  if (status === "canceled") {
+    return "danger";
+  }
+  return "primary";
+}
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -208,89 +221,125 @@ export function ActivityPanel({
   }
 
   return (
-    <div className="detail-section detail-section-compact activity-panel">
-      <div className="activity-panel-head">
-        <div className="section-heading">
-          <span className="eyebrow">Próximo passo</span>
-          <h3>{title}</h3>
-          <p className="section-copy">{contextLabel}</p>
-        </div>
-        <button className="primary-button button-with-icon" onClick={openCreate} type="button">
+    <div className="detail-section detail-section-compact activity-panel space-y-6 rounded-3xl border border-border/70 bg-card/95 p-5 shadow-[0_18px_48px_rgba(17,32,49,0.08)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <SectionHeader eyebrow="Próximo passo" title={title} description={contextLabel} />
+        <button
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+          onClick={openCreate}
+          type="button"
+        >
           <AppIcon name="add" />
           <span>Nova atividade</span>
         </button>
       </div>
 
-      <div className="activity-summary-grid">
-        <div className="metric-card">
-          <span>Próxima atividade</span>
-          <strong>{summary.nextActivity ? ACTIVITY_TYPE_LABELS[summary.nextActivity.activity_type] : "-"}</strong>
-          <small>{summary.nextActivity ? summary.nextActivity.title : "Sem pendência aberta"}</small>
-        </div>
-        <div className="metric-card">
-          <span>Atrasadas</span>
-          <strong>{summary.overdueActivityCount}</strong>
-          <small>{summary.overdueActivityCount > 0 ? "Exigem atenção" : "Em dia"}</small>
-        </div>
-        <div className="metric-card">
-          <span>Total</span>
-          <strong>{activities.length}</strong>
-          <small>atividades no contexto</small>
-        </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <MetricCard
+          label="Próxima atividade"
+          value={summary.nextActivity ? ACTIVITY_TYPE_LABELS[summary.nextActivity.activity_type] : "-"}
+          subtitle={summary.nextActivity ? summary.nextActivity.title : "Sem pendência aberta"}
+        />
+        <MetricCard
+          label="Atrasadas"
+          value={summary.overdueActivityCount}
+          subtitle={summary.overdueActivityCount > 0 ? "Exigem atenção" : "Em dia"}
+        />
+        <MetricCard label="Total" value={activities.length} subtitle="atividades no contexto" />
       </div>
 
-      {panelError && <div className="inline-error">{panelError}</div>}
-      {loading && <div className="empty-state-panel">Atualizando atividades...</div>}
+      {panelError && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {panelError}
+        </div>
+      )}
+      {loading && (
+        <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-4 text-sm text-muted-foreground">
+          Atualizando atividades...
+        </div>
+      )}
 
       {summary.nextActivity && (
-        <div className={isPastDue(summary.nextActivity.due_at) ? "inline-note overdue-note" : "inline-note"}>
-          <strong>Próxima ação</strong>
-          <p>
-            {ACTIVITY_TYPE_LABELS[summary.nextActivity.activity_type]} em {formatDate(summary.nextActivity.due_at)}: {summary.nextActivity.title}
+        <div
+          className={[
+            "rounded-2xl border-l-4 px-4 py-4 shadow-sm",
+            isPastDue(summary.nextActivity.due_at)
+              ? "border-amber-500 bg-amber-50 text-amber-900"
+              : "border-primary bg-primary/5 text-foreground",
+          ].join(" ")}
+        >
+          <strong className="block text-sm font-semibold">Próxima ação</strong>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            {ACTIVITY_TYPE_LABELS[summary.nextActivity.activity_type]} em {formatDate(summary.nextActivity.due_at)}:{" "}
+            {summary.nextActivity.title}
           </p>
         </div>
       )}
 
-      <div className="activity-list">
+      <div className="space-y-3">
         {activities.map((activity) => (
-          <article key={activity.id} className={activity.status === "done" ? "activity-card done" : "activity-card"}>
-            <div className="activity-card-main">
-              <div className="activity-card-head">
-                <div>
-                  <strong>{activity.title}</strong>
-                  <span className="activity-kind">{ACTIVITY_TYPE_LABELS[activity.activity_type]}</span>
+          <article
+            key={activity.id}
+            className={[
+              "rounded-2xl border border-border bg-card/90 p-4 shadow-sm transition-shadow hover:shadow-md",
+              activity.status === "done" ? "opacity-80" : "",
+            ].join(" ")}
+          >
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <strong className="block font-heading text-lg font-semibold text-foreground">{activity.title}</strong>
+                  <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {ACTIVITY_TYPE_LABELS[activity.activity_type]}
+                  </span>
                 </div>
-                <span className={`status-pill status-${activity.status}`}>{activity.status}</span>
+                <StatusPill tone={getActivityTone(activity.status)}>{activity.status}</StatusPill>
               </div>
-              <div className="detail-meta detail-meta-compact">
-                <span>{formatDate(activity.due_at)}</span>
-                <span>{activity.completed_at ? "Concluída" : "Aberta"}</span>
-                {activity.owner_user_name && <span>{activity.owner_user_name}</span>}
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full bg-muted px-3 py-1">{formatDate(activity.due_at)}</span>
+                <span className="rounded-full bg-muted px-3 py-1">{activity.completed_at ? "Concluída" : "Aberta"}</span>
+                {activity.owner_user_name && <span className="rounded-full bg-muted px-3 py-1">{activity.owner_user_name}</span>}
               </div>
-              {activity.note && <p className="activity-note">{activity.note}</p>}
+              {activity.note && <p className="text-sm leading-6 text-muted-foreground">{activity.note}</p>}
             </div>
-            <div className="activity-actions">
+            <div className="mt-4 flex flex-wrap gap-2">
               {activity.status === "pending" && (
-                <button className="ghost-button button-with-icon" onClick={() => handleComplete(activity)} type="button">
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                  onClick={() => handleComplete(activity)}
+                  type="button"
+                >
                   <AppIcon name="check" />
                   <span>Concluir</span>
                 </button>
               )}
               {activity.status === "pending" && (
-                <button className="ghost-button button-with-icon" onClick={() => openEdit(activity)} type="button">
+                <button
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                  onClick={() => openEdit(activity)}
+                  type="button"
+                >
                   <AppIcon name="edit" />
                   <span>Reagendar</span>
                 </button>
               )}
               {activity.status !== "canceled" && (
-                <button className="ghost-button" onClick={() => handleCancel(activity)} type="button">
+                <button
+                  className="inline-flex items-center justify-center rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                  onClick={() => handleCancel(activity)}
+                  type="button"
+                >
                   Cancelar
                 </button>
               )}
             </div>
           </article>
         ))}
-        {activities.length === 0 && <div className="empty-state-panel">{emptyMessage}</div>}
+        {activities.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-5 text-sm text-muted-foreground">
+            {emptyMessage}
+          </div>
+        )}
       </div>
 
       <QuickFormModal
@@ -299,11 +348,12 @@ export function ActivityPanel({
         open={isOpen}
         title={editingActivity ? "Reagendar atividade" : "Nova atividade"}
       >
-        <form className="form-card" onSubmit={handleSubmit}>
-          <div className="task-form-grid task-form-grid-2">
-            <label className="field">
-              <span>Tipo</span>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="field space-y-2">
+              <span className="text-sm font-medium text-foreground">Tipo</span>
               <select
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
                 value={draft.activity_type}
                 onChange={(event) => setDraft((current) => ({ ...current, activity_type: event.target.value as CRMActivityType }))}
               >
@@ -314,34 +364,44 @@ export function ActivityPanel({
                 ))}
               </select>
             </label>
-            <label className="field">
-              <span>Prazo</span>
+            <label className="field space-y-2">
+              <span className="text-sm font-medium text-foreground">Prazo</span>
               <input
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
                 value={draft.due_at}
                 onChange={(event) => setDraft((current) => ({ ...current, due_at: event.target.value }))}
                 type="date"
               />
             </label>
           </div>
-          <label className="field">
-            <span>Título</span>
+          <label className="field space-y-2">
+            <span className="text-sm font-medium text-foreground">Título</span>
             <input
+              className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
               value={draft.title}
               onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
             />
           </label>
-          <label className="field">
-            <span>Nota</span>
+          <label className="field space-y-2">
+            <span className="text-sm font-medium text-foreground">Nota</span>
             <textarea
+              className="min-h-28 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10"
               value={draft.note}
               onChange={(event) => setDraft((current) => ({ ...current, note: event.target.value }))}
             />
           </label>
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
+          <div className="flex flex-wrap gap-3 pt-1">
+            <button
+              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+              type="submit"
+            >
               {editingActivity ? "Salvar reagendamento" : "Criar atividade"}
             </button>
-            <button className="ghost-button" onClick={closeModal} type="button">
+            <button
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+              onClick={closeModal}
+              type="button"
+            >
               Cancelar
             </button>
           </div>

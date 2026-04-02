@@ -1,0 +1,64 @@
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 30% 96%;
+    --foreground: 213 40% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 40% 13%;
+    --primary: 209 49% 38%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 213 20% 92%;
+    --secondary-foreground: 213 40% 13%;
+    --muted: 216 20% 94%;
+    --muted-foreground: 213 14% 44%;
+    --border: 213 20% 88%;
+    --input: 213 20% 88%;
+    --ring: 209 49% 38%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --radius: 0.9rem;
+    --shadow-card: 0 18px 48px rgba(17, 32, 49, 0.08);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-background text-foreground;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground font-body;
+    background:
+      radial-gradient(circle at top left, rgba(3, 105, 161, 0.12), transparent 34%),
+      linear-gradient(180deg, hsl(216 30% 96%) 0%, hsl(216 25% 91%) 100%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-inherit;
+  }
+}
+
+@layer utilities {
+  .font-inherit {
+    font: inherit;
+  }
+}

@@ -10,6 +10,7 @@ import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import { buildSavedViewPayload, formatCRMViewGroupByLabel, normalizeCRMViewFilters } from "../app/savedViews";
 import { createSavedView, loadSavedViews, updateSavedView } from "../app/savedViewsApi";
 import { QuickFormModal } from "../app/QuickFormModal";
+import { PageHeader, PageShell } from "../components/tw/ui";
 import type {
   CRMViewFilters,
   CRMViewGroupBy,
@@ -362,7 +363,12 @@ export function LeadsPage() {
   }
 
   return (
-    <section className="page-grid single">
+    <PageShell>
+      <PageHeader
+        eyebrow="CRM"
+        title="Leads"
+        description="Base de entrada, qualificação e leitura comercial com visibilidade por status, origem e empresa."
+      />
       <section className="crm-console">
         <article className="card crm-console-main">
           <div className="workspace-header workspace-header-compact workspace-header-with-stats">
@@ -751,6 +757,6 @@ export function LeadsPage() {
           </div>
         </form>
       </QuickFormModal>
-    </section>
+    </PageShell>
   );
 }

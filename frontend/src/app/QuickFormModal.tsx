@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 
-import { AppIcon } from "./icons";
+import { ModalShell } from "../components/tw/shared/ModalShell";
 
 type QuickFormModalProps = {
   open: boolean;
@@ -45,25 +45,8 @@ export function QuickFormModal({
   }
 
   return (
-    <div aria-modal="true" className="quick-form-modal-backdrop" onClick={onClose} role="dialog">
-      <div className="quick-form-modal-shell" onClick={(event) => event.stopPropagation()}>
-        <div className="quick-form-modal-header">
-          <div className="section-heading section-heading-compact">
-            <span className="eyebrow">{eyebrow}</span>
-            <h3>{title}</h3>
-            {description && <p className="section-copy">{description}</p>}
-          </div>
-          <button
-            aria-label="Fechar modal"
-            className="ghost-button quick-form-modal-close"
-            onClick={onClose}
-            type="button"
-          >
-            <AppIcon name="close" />
-          </button>
-        </div>
-        <div className="quick-form-modal-body">{children}</div>
-      </div>
-    </div>
+    <ModalShell eyebrow={eyebrow} title={title} description={description} onClose={onClose}>
+      {children}
+    </ModalShell>
   );
 }

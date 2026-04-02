@@ -3,6 +3,23 @@ import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../app/api";
 import { ensureArray } from "../app/arrays";
 import type { RoleItem, UserItem } from "../app/types";
+import {
+  Badge,
+  ButtonRow,
+  CheckboxField,
+  EmptyState,
+  FormField,
+  InlineAlert,
+  PageHeader,
+  PageShell,
+  Panel,
+  PanelBody,
+  TableShell,
+  buttonGhostClassName,
+  buttonPrimaryClassName,
+  inputClassName,
+  selectClassName,
+} from "../components/tw/ui";
 
 export function UsersPage() {
   const [items, setItems] = useState<UserItem[]>([]);
@@ -48,6 +65,18 @@ export function UsersPage() {
     });
   }
 
+  function resetForm() {
+    setSelectedId(null);
+    setForm({
+      email: "",
+      full_name: "",
+      password: "",
+      role_names: [],
+      is_active: true,
+      is_superuser: false,
+    });
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -72,15 +101,7 @@ export function UsersPage() {
         });
       }
 
-      setSelectedId(null);
-      setForm({
-        email: "",
-        full_name: "",
-        password: "",
-        role_names: [],
-        is_active: true,
-        is_superuser: false,
-      });
+      resetForm();
       await load();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : "Falha ao salvar usuário.");
@@ -90,135 +111,157 @@ export function UsersPage() {
   }
 
   return (
-    <section className="page-grid">
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Admin</span>
-          <h3>Usuários</h3>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Nome</th>
-                <th>Papéis</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} onClick={() => populateFromItem(item)}>
-                  <td>{item.email}</td>
-                  <td>{item.full_name}</td>
-                  <td>{ensureArray(item.roles).join(", ") || "-"}</td>
-                  <td>{item.is_active ? "Ativo" : "Inativo"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
+    <PageShell>
+      <PageHeader
+        eyebrow="Admin"
+        title="Usuários"
+        description="Cadastro, papéis e status de acesso com leitura direta da base real."
+      />
 
-      <article className="card">
-        <form className="form-card" onSubmit={handleSubmit}>
-          <div className="section-heading">
-            <span className="eyebrow">Cadastro</span>
-            <h3>{selectedId === null ? "Novo usuário" : "Editar usuário"}</h3>
-          </div>
+      {error && <InlineAlert>{error}</InlineAlert>}
 
-          <label className="field">
-            <span>Email</span>
-            <input
-              disabled={selectedId !== null}
-              value={form.email}
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            />
-          </label>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.9fr)]">
+        <Panel>
+          <PanelBody className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-1">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Base</span>
+                <h3 className="font-heading text-xl font-bold text-foreground">Lista de usuários</h3>
+              </div>
+              <Badge tone="muted">{items.length} registros</Badge>
+            </div>
 
-          <label className="field">
-            <span>Nome completo</span>
-            <input
-              value={form.full_name}
-              onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
-            />
-          </label>
+            <TableShell>
+              <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Email</th>
+                    <th className="px-4 py-3 font-semibold">Nome</th>
+                    <th className="px-4 py-3 font-semibold">Papéis</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {items.map((item) => (
+                    <tr
+                      key={item.id}
+                      aria-selected={selectedId === item.id}
+                      className="cursor-pointer align-top hover:bg-slate-50/80"
+                      onClick={() => populateFromItem(item)}
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-900">{item.email}</td>
+                      <td className="px-4 py-3 text-slate-700">{item.full_name}</td>
+                      <td className="px-4 py-3 text-slate-600">{ensureArray(item.roles).join(", ") || "-"}</td>
+                      <td className="px-4 py-3">
+                        <span className={item.is_active ? "inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700" : "inline-flex rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700"}>
+                          {item.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-8" colSpan={4}>
+                        <EmptyState
+                          description="Crie o primeiro usuário para começar a distribuir acesso no sistema."
+                          title="Nenhum usuário encontrado"
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </TableShell>
+          </PanelBody>
+        </Panel>
 
-          <label className="field">
-            <span>Senha {selectedId !== null ? "(opcional)" : ""}</span>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-            />
-          </label>
+        <Panel>
+          <PanelBody className="space-y-4">
+            <div className="grid gap-1">
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Cadastro</span>
+              <h3 className="font-heading text-xl font-bold text-foreground">
+                {selectedId === null ? "Novo usuário" : "Editar usuário"}
+              </h3>
+            </div>
 
-          <label className="field">
-            <span>Papéis</span>
-            <select
-              multiple
-              value={form.role_names}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  role_names: Array.from(event.target.selectedOptions).map((option) => option.value),
-                }))
-              }
-            >
-              {ensureArray(roles).map((role) => (
-                <option key={role.id} value={role.name}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <FormField label="Email" hint={selectedId !== null ? "Não pode ser alterado na edição." : undefined}>
+                <input
+                  disabled={selectedId !== null}
+                  className={inputClassName}
+                  value={form.email}
+                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                />
+              </FormField>
 
-          <label className="check-field">
-            <input
-              checked={form.is_active}
-              onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
-              type="checkbox"
-            />
-            <span>Usuário ativo</span>
-          </label>
+              <FormField label="Nome completo">
+                <input
+                  className={inputClassName}
+                  value={form.full_name}
+                  onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
+                />
+              </FormField>
 
-          <label className="check-field">
-            <input
-              checked={form.is_superuser}
-              onChange={(event) => setForm((current) => ({ ...current, is_superuser: event.target.checked }))}
-              type="checkbox"
-            />
-            <span>Superusuário</span>
-          </label>
+              <FormField label={`Senha ${selectedId !== null ? "(opcional)" : ""}`}>
+                <input
+                  className={inputClassName}
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                />
+              </FormField>
 
-          {error && <div className="inline-error">{error}</div>}
+              <FormField label="Papéis">
+                <select
+                  multiple
+                  className={selectClassName}
+                  value={form.role_names}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      role_names: Array.from(event.target.selectedOptions).map((option) => option.value),
+                    }))
+                  }
+                >
+                  {ensureArray(roles).map((role) => (
+                    <option key={role.id} value={role.name}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
 
-          <div className="form-actions">
-            <button className="primary-button" disabled={submitting} type="submit">
-              {submitting ? "Salvando..." : selectedId === null ? "Criar usuário" : "Atualizar usuário"}
-            </button>
-            {selectedId !== null && (
-              <button
-                className="ghost-button"
-                onClick={() => {
-                  setSelectedId(null);
-                  setForm({
-                    email: "",
-                    full_name: "",
-                    password: "",
-                    role_names: [],
-                    is_active: true,
-                    is_superuser: false,
-                  });
-                }}
-                type="button"
-              >
-                Limpar
-              </button>
-            )}
-          </div>
-        </form>
-      </article>
-    </section>
+              <div className="grid gap-3">
+                <CheckboxField
+                  checked={form.is_active}
+                  label="Usuário ativo"
+                  onChange={(checked) => setForm((current) => ({ ...current, is_active: checked }))}
+                />
+                <CheckboxField
+                  checked={form.is_superuser}
+                  label="Superusuário"
+                  onChange={(checked) => setForm((current) => ({ ...current, is_superuser: checked }))}
+                />
+              </div>
+
+              <ButtonRow>
+                <button className={buttonPrimaryClassName} disabled={submitting} type="submit">
+                  {submitting ? "Salvando..." : selectedId === null ? "Criar usuário" : "Atualizar usuário"}
+                </button>
+                {selectedId !== null && (
+                  <button
+                    className={buttonGhostClassName}
+                    onClick={resetForm}
+                    type="button"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </ButtonRow>
+            </form>
+          </PanelBody>
+        </Panel>
+      </div>
+    </PageShell>
   );
 }

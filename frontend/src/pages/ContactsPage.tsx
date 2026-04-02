@@ -6,6 +6,25 @@ import { formatDateTime } from "../app/format";
 import { AppIcon } from "../app/icons";
 import { QuickFormModal } from "../app/QuickFormModal";
 import type { CompanyItem, ContactItem } from "../app/types";
+import {
+  Badge,
+  ButtonRow,
+  CheckboxField,
+  EmptyState,
+  FormField,
+  InlineAlert,
+  PageHeader,
+  PageShell,
+  Panel,
+  PanelBody,
+  StatCard,
+  StatGrid,
+  TableShell,
+  buttonGhostClassName,
+  buttonPrimaryClassName,
+  inputClassName,
+  selectClassName,
+} from "../components/tw/ui";
 
 type ContactFormState = {
   company_id: string;
@@ -30,13 +49,7 @@ function matchesContact(contact: ContactItem, query: string) {
     return true;
   }
 
-  const haystack = [
-    contact.full_name,
-    contact.email,
-    contact.phone,
-    contact.position,
-    contact.company_name,
-  ]
+  const haystack = [contact.full_name, contact.email, contact.phone, contact.position, contact.company_name]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -179,170 +192,182 @@ export function ContactsPage() {
   }
 
   return (
-    <section className="page-grid single">
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">CRM</span>
-          <h3>Contatos</h3>
-          <p className="section-copy">
-            Indicadores compactos primeiro, cadastro logo abaixo e a tabela sempre no final.
-          </p>
-        </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="CRM"
+        title="Contatos"
+        description="Leitura rápida da base de pessoas ligadas às contas do CRM."
+      />
 
-        {error && <div className="inline-error">{error}</div>}
+      {error && <InlineAlert>{error}</InlineAlert>}
 
-        <div className="crm-summary-grid compact-summary-grid">
-          <div className="metric-card">
-            <span>Total</span>
-            <strong>{stats.total}</strong>
-            <small>cadastros na base</small>
+      <Panel>
+        <PanelBody className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-1">
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Indicadores</span>
+              <h3 className="font-heading text-xl font-bold text-foreground">Resumo da base</h3>
+            </div>
+            <ButtonRow>
+              <button className={buttonPrimaryClassName} onClick={startCreate} type="button">
+                <AppIcon name="add" />
+                <span>Novo contato</span>
+              </button>
+            </ButtonRow>
           </div>
-          <div className="metric-card">
-            <span>Ativos</span>
-            <strong>{stats.active}</strong>
-            <small>pessoas em uso</small>
-          </div>
-          <div className="metric-card">
-            <span>Com email</span>
-            <strong>{stats.withEmail}</strong>
-            <small>canal de contato</small>
-          </div>
-          <div className="metric-card">
-            <span>Com empresa</span>
-            <strong>{stats.withCompany}</strong>
-            <small>vínculos comerciais</small>
-          </div>
-        </div>
-      </article>
 
-      <article className="card">
-        <div className="stacked-card-sections">
-          <div className="detail-panel detail-panel-standalone contacts-detail-panel">
-            <div className="workspace-header workspace-header-compact">
-              <div className="section-heading section-heading-compact">
-                <span className="eyebrow">Painel do contato</span>
-                <h3>{selectedContact?.full_name || "Nenhum contato selecionado"}</h3>
-                <p className="section-copy">
-                  O painel mostra contexto humano do contato sem tirar o foco da base.
+          <StatGrid>
+            <StatCard label="Total" value={stats.total} detail="cadastros na base" />
+            <StatCard label="Ativos" value={stats.active} detail="pessoas em uso" />
+            <StatCard label="Com email" value={stats.withEmail} detail="canal de contato" />
+            <StatCard label="Com empresa" value={stats.withCompany} detail="vínculos comerciais" />
+          </StatGrid>
+        </PanelBody>
+      </Panel>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <Panel>
+          <PanelBody className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="grid gap-1">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Painel</span>
+                <h3 className="font-heading text-xl font-bold text-foreground">
+                  {selectedContact?.full_name || "Nenhum contato selecionado"}
+                </h3>
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                  O painel mostra contexto humano do contato sem tirar a visão da lista.
                 </p>
               </div>
-              <div className="workspace-actions">
-                <button className="primary-button button-with-icon" onClick={startCreate} type="button">
+              <ButtonRow>
+                <button className={buttonPrimaryClassName} onClick={startCreate} type="button">
                   <AppIcon name="add" />
                   <span>Novo contato</span>
                 </button>
                 {selectedContact && (
-                  <button className="ghost-button button-with-icon" onClick={startEdit} type="button">
+                  <button className={buttonGhostClassName} onClick={startEdit} type="button">
                     <AppIcon name="edit" />
                     <span>Editar</span>
                   </button>
                 )}
-              </div>
+              </ButtonRow>
             </div>
 
             {selectedContact ? (
-              <div className="detail-hero">
-                <div className="detail-badges">
-                  <span className={selectedContact.is_active ? "status-pill status-active" : "status-pill status-on_hold"}>
-                    {selectedContact.is_active ? "Ativo" : "Inativo"}
-                  </span>
-                  <span className="status-pill detail-source">{selectedContact.company_name || "Sem empresa"}</span>
+              <div className="grid gap-4">
+                <div className="rounded-2xl border border-border bg-secondary/30 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    <span className={selectedContact.is_active ? "inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700" : "inline-flex rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700"}>
+                      {selectedContact.is_active ? "Ativo" : "Inativo"}
+                    </span>
+                    <span className="inline-flex rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+                      {selectedContact.company_name || "Sem empresa"}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                    <span className="rounded-full bg-white px-3 py-1">{selectedContact.email || "Sem email"}</span>
+                    <span className="rounded-full bg-white px-3 py-1">{selectedContact.phone || "Sem telefone"}</span>
+                    <span className="rounded-full bg-white px-3 py-1">{selectedContact.position || "Sem cargo"}</span>
+                    <span className="rounded-full bg-white px-3 py-1">{formatDateTime(selectedContact.created_at)}</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {selectedContact.company_name
+                      ? `Contato vinculado à empresa ${selectedContact.company_name}.`
+                      : "Contato ainda sem vínculo com uma empresa."}
+                  </p>
                 </div>
-                <div className="detail-meta detail-meta-dense">
-                  <span>{selectedContact.email || "Sem email"}</span>
-                  <span>{selectedContact.phone || "Sem telefone"}</span>
-                  <span>{selectedContact.position || "Sem cargo"}</span>
-                  <span>{formatDateTime(selectedContact.created_at)}</span>
-                </div>
-                <p>
-                  {selectedContact.company_name
-                    ? `Contato vinculado à empresa ${selectedContact.company_name}.`
-                    : "Contato ainda sem vínculo com uma empresa."}
-                </p>
               </div>
             ) : (
-              <div className="empty-state-panel">
-                <strong>Selecione um contato</strong>
-                <p>Toque em uma linha da lista para abrir o contexto operacional desse registro.</p>
-              </div>
+              <EmptyState
+                description="Selecione uma linha da lista para abrir o contexto operacional do registro."
+                title="Selecione um contato"
+              />
             )}
-          </div>
-        </div>
-      </article>
+          </PanelBody>
+        </Panel>
 
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Tabela</span>
-          <h3>Base de contatos</h3>
-        </div>
+        <Panel>
+          <PanelBody className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-1">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Tabela</span>
+                <h3 className="font-heading text-xl font-bold text-foreground">Base de contatos</h3>
+              </div>
+              <Badge tone="muted">{filteredItems.length} resultados</Badge>
+            </div>
 
-        <div className="toolbar contacts-toolbar">
-          <input
-            placeholder="Buscar por nome, empresa, email, telefone ou cargo"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select value={activeOnly ? "active" : ""} onChange={(event) => setActiveOnly(event.target.value === "active")}>
-            <option value="">Todos</option>
-            <option value="active">Somente ativos</option>
-          </select>
-          <button className="primary-button button-with-icon" onClick={startCreate} type="button">
-            <AppIcon name="add" />
-            <span>Novo contato</span>
-          </button>
-        </div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+              <input
+                className={inputClassName}
+                placeholder="Buscar por nome, empresa, email, telefone ou cargo"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <select
+                className={selectClassName}
+                value={activeOnly ? "active" : ""}
+                onChange={(event) => setActiveOnly(event.target.value === "active")}
+              >
+                <option value="">Todos</option>
+                <option value="active">Somente ativos</option>
+              </select>
+              <button className={buttonPrimaryClassName} onClick={startCreate} type="button">
+                <AppIcon name="add" />
+                <span>Novo contato</span>
+              </button>
+            </div>
 
-        <div className="table-summary">
-          <span>{filteredItems.length} resultados</span>
-          <span>{activeOnly ? "Filtrando só ativos" : "Incluindo inativos"}</span>
-          <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-        </div>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              <Badge tone="muted">{activeOnly ? "Filtrando só ativos" : "Incluindo inativos"}</Badge>
+              <Badge tone="muted">{query ? `Busca: ${query}` : "Busca livre"}</Badge>
+            </div>
 
-        {loading ? (
-          <div className="empty-state-panel">Carregando contatos...</div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Empresa</th>
-                  <th>Email</th>
-                  <th>Cargo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => (
-                  <tr
-                    key={item.id}
-                    aria-selected={selectedId === item.id}
-                    className={selectedId === item.id ? "selected-row" : ""}
-                    onClick={() => populate(item)}
-                    onKeyDown={(event) => handleRowKeyDown(event, item)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <td>{item.full_name}</td>
-                    <td>{item.company_name || "-"}</td>
-                    <td>{item.email || "-"}</td>
-                    <td>{item.position || "-"}</td>
-                  </tr>
-                ))}
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>
-                      <div className="empty-state-panel">
-                        <strong>Nenhum contato encontrado</strong>
-                        <p>Refine a busca ou crie um novo contato pela ação ao lado.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </article>
+            {loading ? (
+              <EmptyState description="Carregando contatos da base real..." title="Carregando contatos" />
+            ) : (
+              <TableShell>
+                <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Nome</th>
+                      <th className="px-4 py-3 font-semibold">Empresa</th>
+                      <th className="px-4 py-3 font-semibold">Email</th>
+                      <th className="px-4 py-3 font-semibold">Cargo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        aria-selected={selectedId === item.id}
+                        className={selectedId === item.id ? "cursor-pointer bg-primary/5 hover:bg-primary/5" : "cursor-pointer hover:bg-slate-50/80"}
+                        onClick={() => populate(item)}
+                        onKeyDown={(event) => handleRowKeyDown(event, item)}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <td className="px-4 py-3 font-medium text-slate-900">{item.full_name}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.company_name || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{item.email || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600">{item.position || "-"}</td>
+                      </tr>
+                    ))}
+                    {filteredItems.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-8" colSpan={4}>
+                          <EmptyState
+                            description="Refine a busca ou crie um novo contato pela ação ao lado."
+                            title="Nenhum contato encontrado"
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </TableShell>
+            )}
+          </PanelBody>
+        </Panel>
+      </div>
 
       <QuickFormModal
         description="Cadastro curto para criar ou corrigir um contato sem perder a lista de vista."
@@ -350,10 +375,10 @@ export function ContactsPage() {
         open={isModalOpen}
         title={selectedId === null ? "Novo contato" : "Editar contato"}
       >
-        <form className="form-card" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Empresa</span>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <FormField label="Empresa">
             <select
+              className={selectClassName}
               value={form.company_id}
               onChange={(event) => setForm((current) => ({ ...current, company_id: event.target.value }))}
             >
@@ -364,51 +389,53 @@ export function ContactsPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span>Nome</span>
+          </FormField>
+
+          <FormField label="Nome">
             <input
+              className={inputClassName}
               value={form.full_name}
               onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))}
             />
-          </label>
-          <div className="task-form-grid task-form-grid-2">
-            <label className="field">
-              <span>Email</span>
+          </FormField>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Email">
               <input
+                className={inputClassName}
                 value={form.email}
                 onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
               />
-            </label>
-            <label className="field">
-              <span>Telefone</span>
+            </FormField>
+            <FormField label="Telefone">
               <input
+                className={inputClassName}
                 value={form.phone}
                 onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
               />
-            </label>
+            </FormField>
           </div>
-          <label className="field">
-            <span>Cargo</span>
+
+          <FormField label="Cargo">
             <input
+              className={inputClassName}
               value={form.position}
               onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))}
             />
-          </label>
-          <label className="check-field">
-            <input
-              checked={form.is_active}
-              onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
-              type="checkbox"
-            />
-            <span>Contato ativo</span>
-          </label>
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
+          </FormField>
+
+          <CheckboxField
+            checked={form.is_active}
+            label="Contato ativo"
+            onChange={(checked) => setForm((current) => ({ ...current, is_active: checked }))}
+          />
+
+          <ButtonRow>
+            <button className={buttonPrimaryClassName} type="submit">
               {selectedId === null ? "Criar contato" : "Atualizar contato"}
             </button>
             <button
-              className="ghost-button"
+              className={buttonGhostClassName}
               onClick={() => {
                 closeModal();
                 resetFormState();
@@ -417,9 +444,9 @@ export function ContactsPage() {
             >
               Cancelar
             </button>
-          </div>
+          </ButtonRow>
         </form>
       </QuickFormModal>
-    </section>
+    </PageShell>
   );
 }

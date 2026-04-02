@@ -5,6 +5,7 @@ import { ensureArray } from "../app/arrays";
 import { formatDateTime } from "../app/format";
 import { formatAuditStatus } from "../app/labels";
 import type { AuditEventItem } from "../app/types";
+import { EmptyState, InlineAlert, PageHeader, PageShell, Panel, PanelBody, TableShell } from "../components/tw/ui";
 
 export function AuditPage() {
   const [items, setItems] = useState<AuditEventItem[]>([]);
@@ -23,40 +24,57 @@ export function AuditPage() {
   }
 
   return (
-    <section className="page-grid single">
-      <article className="card">
-        <div className="section-heading">
-          <span className="eyebrow">Segurança</span>
-          <h3>Eventos recentes</h3>
-        </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Segurança"
+        title="Eventos recentes"
+        description="Leitura compacta da trilha de auditoria e dos eventos sensíveis da operação."
+      />
 
-        {error && <div className="inline-error">{error}</div>}
+      {error && <InlineAlert>{error}</InlineAlert>}
 
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Ação</th>
-                <th>Ator</th>
-                <th>Status</th>
-                <th>Alvo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td>{formatDateTime(item.created_at)}</td>
-                  <td>{item.action}</td>
-                  <td>{item.actor_email || "-"}</td>
-                  <td>{formatAuditStatus(item.status)}</td>
-                  <td>{[item.target_type, item.target_id].filter(Boolean).join(" #") || "-"}</td>
+      <Panel>
+        <PanelBody className="p-0">
+          <TableShell>
+            <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Quando</th>
+                  <th className="px-4 py-3 font-semibold">Ação</th>
+                  <th className="px-4 py-3 font-semibold">Ator</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Alvo</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {items.map((item) => (
+                  <tr key={item.id} className="align-top hover:bg-slate-50/80">
+                    <td className="px-4 py-3 text-slate-600">{formatDateTime(item.created_at)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{item.action}</td>
+                    <td className="px-4 py-3 text-slate-600">{item.actor_email || "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                        {formatAuditStatus(item.status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{[item.target_type, item.target_id].filter(Boolean).join(" #") || "-"}</td>
+                  </tr>
+                ))}
+                {items.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-8" colSpan={5}>
+                      <EmptyState
+                        description="Ainda não há eventos de auditoria recentes para exibir."
+                        title="Sem auditoria recente"
+                      />
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </TableShell>
+        </PanelBody>
+      </Panel>
+    </PageShell>
   );
 }
