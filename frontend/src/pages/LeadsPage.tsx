@@ -10,7 +10,6 @@ import { formatLeadStatus, LEAD_STATUSES } from "../app/labels";
 import { buildSavedViewPayload, formatCRMViewGroupByLabel, normalizeCRMViewFilters } from "../app/savedViews";
 import { createSavedView, loadSavedViews, updateSavedView } from "../app/savedViewsApi";
 import { QuickFormModal } from "../app/QuickFormModal";
-import { PageHeader, PageShell } from "../components/tw/ui";
 import type {
   CRMViewFilters,
   CRMViewGroupBy,
@@ -20,6 +19,20 @@ import type {
   LeadListResponse,
   SavedViewItem,
 } from "../app/types";
+import {
+  PipelineActions,
+  PipelineButton,
+  PipelineCard,
+  PipelineEmpty,
+  PipelineField,
+  PipelineInput,
+  PipelineMetricCard,
+  PipelineMetricGrid,
+  PipelinePageShell,
+  PipelinePill,
+  PipelineSectionHeader,
+  PipelineSelect,
+} from "../components/tw/pipeline";
 
 const PAGE_SIZE = 8;
 const LEAD_GROUP_OPTIONS: Array<{ value: CRMViewGroupBy; label: string }> = [
@@ -87,6 +100,19 @@ function getLeadViewName(filters: CRMViewFilters) {
     return `Leads por ${formatCRMViewGroupByLabel(filters.group_by)}`;
   }
   return "Visão de leads";
+}
+
+function getLeadTone(status: LeadItem["status"]) {
+  if (status === "won") {
+    return "navy";
+  }
+  if (status === "proposal") {
+    return "warning";
+  }
+  if (status === "qualified") {
+    return "accent";
+  }
+  return "muted";
 }
 
 export function LeadsPage() {
@@ -363,82 +389,91 @@ export function LeadsPage() {
   }
 
   return (
-    <PageShell>
-      <PageHeader
-        eyebrow="CRM"
-        title="Leads"
-        description="Base de entrada, qualificação e leitura comercial com visibilidade por status, origem e empresa."
-      />
-      <section className="crm-console">
-        <article className="card crm-console-main">
-          <div className="workspace-header workspace-header-compact workspace-header-with-stats">
-            <div className="section-heading section-heading-compact">
-              <span className="eyebrow">CRM</span>
-              <h3>Leads</h3>
+    <PipelinePageShell
+      eyebrow="CRM"
+      title="Leads"
+      description="Base de entrada, qualificação e leitura comercial com visibilidade por status, origem e empresa."
+      actions={
+        <PipelineActions>
+          <PipelineButton onClick={selectedId !== null ? openEditModal : openCreateModal} variant="primary" type="button">
+            <AppIcon name="add" />
+            <span>{selectedId !== null ? "Editar lead" : "Novo lead"}</span>
+          </PipelineButton>
+          {selectedId !== null && (
+            <PipelineButton onClick={resetForm} variant="ghost" type="button">
+              <AppIcon name="close" />
+              <span>Limpar foco</span>
+            </PipelineButton>
+          )}
+          <PipelineButton onClick={openSaveViewDialog} variant="ghost" type="button">
+            <AppIcon name="spark" />
+            <span>{activeSavedView ? "Atualizar visão" : "Salvar visão"}</span>
+          </PipelineButton>
+        </PipelineActions>
+      }
+    >
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
+        <PipelineCard className="space-y-6 p-6">
+          <PipelineSectionHeader
+            eyebrow="Fila comercial"
+            title="Leads e visões"
+            description="O recorte atual combina busca, filtros, agrupamento e salvamento de visões sem sair da mesma tela."
+          />
+
+          {error && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-700">
+              {error}
             </div>
-            <div className="workspace-stat-strip">
-              <div className="workspace-stat-chip">
-                <span>Novos</span>
-                <strong>{statusStats.new}</strong>
-              </div>
-              <div className="workspace-stat-chip">
-                <span>Qualificados</span>
-                <strong>{statusStats.qualified}</strong>
-              </div>
-              <div className="workspace-stat-chip">
-                <span>Em proposta</span>
-                <strong>{statusStats.proposal}</strong>
-              </div>
-              <div className="workspace-stat-chip">
-                <span>Ganhos</span>
-                <strong>{statusStats.won}</strong>
-              </div>
+          )}
+
+          {savedViewError && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-800">
+              {savedViewError}
             </div>
-            <div className="workspace-actions">
-              <button className="primary-button button-with-icon" onClick={selectedId !== null ? openEditModal : openCreateModal} type="button">
-                <AppIcon name="add" />
-                <span>{selectedId !== null ? "Editar lead" : "Novo lead"}</span>
-              </button>
-              {selectedId !== null && (
-                <button className="ghost-button button-with-icon" onClick={resetForm} type="button">
-                  <AppIcon name="close" />
-                  <span>Limpar foco</span>
-                </button>
-              )}
-            </div>
+          )}
+
+          <PipelineMetricGrid columns={4}>
+            <PipelineMetricCard label="Novos" value={statusStats.new} hint="leads recém-registrados" />
+            <PipelineMetricCard label="Qualificados" value={statusStats.qualified} hint="leads prontos para diagnóstico" />
+            <PipelineMetricCard label="Em proposta" value={statusStats.proposal} hint="em negociação comercial" />
+            <PipelineMetricCard label="Ganhos" value={statusStats.won} hint="convertidos em operação" />
+          </PipelineMetricGrid>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <PipelineField label="Buscar por título ou origem">
+              <PipelineInput
+                placeholder="Buscar por título ou origem"
+                value={query}
+                onChange={(event) => {
+                  setPage(1);
+                  resetViewSelection();
+                  setQuery(event.target.value);
+                }}
+              />
+            </PipelineField>
+
+            <PipelineField label="Status">
+              <PipelineSelect
+                value={filterStatus}
+                onChange={(event) => {
+                  setPage(1);
+                  resetViewSelection();
+                  setFilterStatus(event.target.value);
+                }}
+              >
+                <option value="">Todos os status</option>
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatLeadStatus(status)}
+                  </option>
+                ))}
+              </PipelineSelect>
+            </PipelineField>
           </div>
-          {error && <div className="inline-error">{error}</div>}
-          {savedViewError && <div className="inline-note">{savedViewError}</div>}
-          <div className="toolbar">
-            <input
-              placeholder="Buscar por título ou origem"
-              value={query}
-              onChange={(event) => {
-                setPage(1);
-                resetViewSelection();
-                setQuery(event.target.value);
-              }}
-            />
-            <select
-              value={filterStatus}
-              onChange={(event) => {
-                setPage(1);
-                resetViewSelection();
-                setFilterStatus(event.target.value);
-              }}
-            >
-              <option value="">Todos os status</option>
-              {LEAD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {formatLeadStatus(status)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="view-controls">
-            <label className="view-control">
-              <span>Visão salva</span>
-              <select
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <PipelineField label="Visão salva">
+              <PipelineSelect
                 value={activeSavedViewId ?? ""}
                 onChange={(event) => {
                   const nextId = event.target.value ? Number(event.target.value) : null;
@@ -457,11 +492,11 @@ export function LeadsPage() {
                     {view.is_default ? " (padrão)" : ""}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="view-control">
-              <span>Agrupar por</span>
-              <select
+              </PipelineSelect>
+            </PipelineField>
+
+            <PipelineField label="Agrupar por">
+              <PipelineSelect
                 value={groupBy}
                 onChange={(event) => {
                   setPage(1);
@@ -474,112 +509,163 @@ export function LeadsPage() {
                     {option.label}
                   </option>
                 ))}
-              </select>
-            </label>
-            <div className="view-actions">
-              <button className="ghost-button button-with-icon" onClick={openSaveViewDialog} type="button">
-                <AppIcon name="spark" />
-                <span>{activeSavedView ? "Atualizar visão" : "Salvar visão"}</span>
-              </button>
-              <button className="ghost-button button-with-icon" onClick={resetViewSelection} type="button">
-                <AppIcon name="close" />
-                <span>Limpar visão</span>
-              </button>
-            </div>
+              </PipelineSelect>
+            </PipelineField>
           </div>
-          <div className="table-summary">
-            <span>{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</span>
-            <span>{query ? `Busca: ${query}` : "Busca livre"}</span>
-            <span>{groupBy === "none" ? "Lista simples" : `Agrupado por ${formatCRMViewGroupByLabel(groupBy)}`}</span>
-            <span>{selectedId !== null ? `Lead ativo #${selectedId}` : "Nenhum lead ativo"}</span>
+
+          <div className="flex flex-wrap gap-2">
+            <PipelinePill tone="muted">{filterStatus ? `Filtro: ${formatLeadStatus(filterStatus)}` : "Todos os status"}</PipelinePill>
+            <PipelinePill tone="muted">{query ? `Busca: ${query}` : "Busca livre"}</PipelinePill>
+            <PipelinePill tone="accent">
+              {groupBy === "none" ? "Lista simples" : `Agrupado por ${formatCRMViewGroupByLabel(groupBy)}`}
+            </PipelinePill>
+            <PipelinePill tone={selectedId !== null ? "navy" : "muted"}>
+              {selectedId !== null ? `Lead ativo #${selectedId}` : "Nenhum lead ativo"}
+            </PipelinePill>
           </div>
-          {groupedItems.map((group) => (
-            <section key={group.key} className="grouped-records">
-              {groupedItems.length > 1 && (
-                <div className="grouped-records-head">
-                  <div>
-                    <span className="eyebrow">Agrupamento</span>
-                    <h4>{group.label}</h4>
-                  </div>
-                  <span className="status-pill">{group.items.length}</span>
-                </div>
-              )}
-              <div className="record-list">
-                {group.items.map((item) => (
-                  <button
-                    key={item.id}
-                    aria-pressed={selectedId === item.id}
-                    className={selectedId === item.id ? "record-list-item selected" : "record-list-item"}
-                    onClick={() => populate(item)}
-                    type="button"
-                  >
-                    <div className="record-list-item-main">
-                      <div className="record-list-item-head">
-                        <strong>{item.title}</strong>
-                        <span className={`status-pill status-${item.status}`}>{formatLeadStatus(item.status)}</span>
-                      </div>
-                      <div className="record-list-item-meta">
-                        <span>{item.company_name || "Sem empresa"}</span>
-                        <span>{item.contact_name || "Sem contato"}</span>
-                        <span>{item.source || "Origem não informada"}</span>
-                        {item.next_activity && <span>{item.next_activity.title}</span>}
-                        {(item.overdue_activity_count || 0) > 0 && <span>{item.overdue_activity_count} atrasada(s)</span>}
-                      </div>
+
+          <div className="space-y-5">
+            {groupedItems.map((group) => (
+              <section key={group.key} className="space-y-3">
+                {groupedItems.length > 1 && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+                        Agrupamento
+                      </span>
+                      <h4 className="font-heading text-xl font-bold text-slate-900">{group.label}</h4>
                     </div>
-                    <div className="record-list-item-side">
-                      <small>Criado em</small>
-                      <span>{formatDateTime(item.created_at)}</span>
-                    </div>
-                  </button>
-                ))}
-                {group.items.length === 0 && (
-                  <div className="record-list-empty">
-                    <strong>Nenhum lead encontrado</strong>
-                    <p>Ajuste a busca ou o status para abrir outro recorte comercial.</p>
+                    <PipelinePill tone="muted">{group.items.length}</PipelinePill>
                   </div>
                 )}
-              </div>
-            </section>
-          ))}
-          <div className="pager">
-            <span>{total} registros</span>
-            <div className="pager-actions">
-              <button className="ghost-button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} type="button">
+
+                <div className="grid gap-2">
+                  {group.items.map((item) => {
+                    const selected = selectedId === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        aria-pressed={selected}
+                        className={
+                          selected
+                            ? "flex w-full flex-col gap-4 rounded-3xl border border-sky-300/60 bg-[linear-gradient(145deg,rgba(3,105,161,0.12),rgba(255,255,255,0.96))] px-4 py-4 text-left shadow-[0_14px_28px_rgba(17,32,49,0.08)] transition hover:-translate-y-0.5"
+                            : "flex w-full flex-col gap-4 rounded-3xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
+                        }
+                        onClick={() => populate(item)}
+                        type="button"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 space-y-1">
+                            <h5 className="font-heading text-[15px] font-semibold leading-5 text-slate-900">
+                              {item.title}
+                            </h5>
+                            <p className="truncate text-sm text-slate-600">
+                              {item.company_name || "Sem empresa"}
+                            </p>
+                          </div>
+                          <PipelinePill tone={getLeadTone(item.status)}>{formatLeadStatus(item.status)}</PipelinePill>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <PipelinePill tone="muted">{item.contact_name || "Sem contato"}</PipelinePill>
+                          <PipelinePill tone="muted">{item.source || "Origem não informada"}</PipelinePill>
+                          {item.next_activity && <PipelinePill tone="accent">{item.next_activity.title}</PipelinePill>}
+                          {(item.overdue_activity_count || 0) > 0 && (
+                            <PipelinePill tone="warning">{item.overdue_activity_count} atrasada(s)</PipelinePill>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 text-sm text-slate-500">
+                          <span className="uppercase tracking-[0.14em]">Criado em</span>
+                          <span className="font-medium text-slate-700">{formatDateTime(item.created_at)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {group.items.length === 0 && (
+                    <PipelineEmpty>
+                      <strong className="block font-heading text-sm font-semibold text-slate-900">
+                        Nenhum lead encontrado
+                      </strong>
+                      <span>Ajuste a busca ou o status para abrir outro recorte comercial.</span>
+                    </PipelineEmpty>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-slate-200/80 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm text-slate-600">{total} registros</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <PipelineButton disabled={page <= 1} onClick={() => setPage((current) => current - 1)} variant="ghost" type="button">
                 Anterior
-              </button>
-              <span>Página {page}</span>
-              <button className="ghost-button" disabled={page * PAGE_SIZE >= total} onClick={() => setPage((current) => current + 1)} type="button">
+              </PipelineButton>
+              <span className="text-sm text-slate-600">Página {page}</span>
+              <PipelineButton
+                disabled={page * PAGE_SIZE >= total}
+                onClick={() => setPage((current) => current + 1)}
+                variant="ghost"
+                type="button"
+              >
                 Próxima
-              </button>
+              </PipelineButton>
             </div>
           </div>
-        </article>
+        </PipelineCard>
 
-        <aside className="card crm-console-side">
-          <div className="context-stack">
-            {selectedDetail ? (
-              <div className="detail-panel detail-panel-standalone">
-              <div className="detail-hero">
-                <div className="detail-badges">
-                  <span className={`status-pill status-${selectedDetail.status}`}>{formatLeadStatus(selectedDetail.status)}</span>
-                  <span className="status-pill detail-source">{selectedDetail.source || "Origem não informada"}</span>
+        <PipelineCard className="space-y-5 p-6">
+          <PipelineSectionHeader
+            eyebrow="Painel"
+            title={selectedDetail ? selectedDetail.title : "Nenhum lead selecionado"}
+            description={
+              selectedDetail
+                ? "O painel contextual mostra etapa, vínculo comercial, ações e histórico antes de qualquer edição."
+                : "Selecione um lead na fila para ver contexto comercial, timeline e ações."
+            }
+          />
+
+          {selectedDetail ? (
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-5 shadow-sm">
+                <div className="flex flex-wrap gap-2">
+                  <PipelinePill tone={getLeadTone(selectedDetail.status)}>{formatLeadStatus(selectedDetail.status)}</PipelinePill>
+                  <PipelinePill tone="muted">{selectedDetail.source || "Origem não informada"}</PipelinePill>
                 </div>
-                <div className="section-heading">
-                  <span className="eyebrow">Painel do lead</span>
-                  <h3>{selectedDetail.title}</h3>
+
+                <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+                      Painel do lead
+                    </span>
+                    <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                      {selectedDetail.description || "Sem descrição."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2 text-sm text-slate-600">
+                    <div className="flex flex-wrap gap-2">
+                      <PipelinePill tone="muted">{selectedDetail.company_name || "Sem empresa"}</PipelinePill>
+                      <PipelinePill tone="muted">{selectedDetail.contact_name || "Sem contato"}</PipelinePill>
+                    </div>
+                    <span className="text-right text-xs uppercase tracking-[0.14em] text-slate-500">
+                      {formatDateTime(selectedDetail.created_at)}
+                    </span>
+                  </div>
                 </div>
-                <div className="detail-meta detail-meta-dense">
-                  <span>{selectedDetail.company_name || "Sem empresa"}</span>
-                  <span>{selectedDetail.contact_name || "Sem contato"}</span>
-                  <span>{formatDateTime(selectedDetail.created_at)}</span>
-                </div>
-                <p>{selectedDetail.description || "Sem descrição."}</p>
               </div>
 
-              <div className="record-action-bar">
-                <div className="helper-card">
-                  <strong>Próxima leitura</strong>
-                  <p>
+              <div className="grid gap-3 md:grid-cols-3">
+                <PipelineMetricCard label="Contato" value={selectedDetail.contact_name || "-"} hint="vínculo principal" />
+                <PipelineMetricCard label="Empresa" value={selectedDetail.company_name || "-"} hint="conta associada" />
+                <PipelineMetricCard label="Eventos" value={safeHistory.length} hint="mudanças registradas" />
+              </div>
+
+              <div className="grid gap-3 rounded-[28px] border border-slate-200 bg-white/95 p-5 shadow-sm md:grid-cols-3">
+                <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+                  <strong className="block font-heading text-lg text-slate-900">Próxima leitura</strong>
+                  <p className="text-sm leading-6 text-slate-600">
                     {selectedDetail.status === "new" && "Validar origem e qualificar a necessidade."}
                     {selectedDetail.status === "qualified" && "Entrar em diagnóstico com informações completas."}
                     {selectedDetail.status === "diagnosis" && "Consolidar escopo para avançar à proposta."}
@@ -588,64 +674,54 @@ export function LeadsPage() {
                     {selectedDetail.status === "lost" && "Lead encerrado. Registrar aprendizado comercial."}
                   </p>
                 </div>
-                <div className="helper-card">
-                  <strong>Contato principal</strong>
-                  <p>{selectedDetail.contact_name || "Sem contato principal vinculado."}</p>
+
+                <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+                  <strong className="block font-heading text-lg text-slate-900">Contato principal</strong>
+                  <p className="text-sm leading-6 text-slate-600">
+                    {selectedDetail.contact_name || "Sem contato principal vinculado."}
+                  </p>
                 </div>
-                <div className="helper-card">
-                  <strong>Próximo passo comercial</strong>
-                  <p>Abra uma oportunidade pré-preenchida a partir deste lead quando o diagnóstico estiver pronto.</p>
-                  <div className="workspace-actions-tight">
-                    <button className="ghost-button button-with-icon" onClick={openEditModal} type="button">
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+                  <strong className="block font-heading text-lg text-slate-900">Próximo passo comercial</strong>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Abra uma oportunidade pré-preenchida a partir deste lead quando o diagnóstico estiver pronto.
+                  </p>
+                  <PipelineActions>
+                    <PipelineButton onClick={openEditModal} variant="ghost" type="button">
                       <AppIcon name="edit" />
                       <span>Editar lead</span>
-                    </button>
-                    <button className="ghost-button button-with-icon" onClick={handleCreateOpportunity} type="button">
+                    </PipelineButton>
+                    <PipelineButton onClick={handleCreateOpportunity} variant="primary" type="button">
                       <AppIcon name="spark" />
                       <span>Abrir oportunidade</span>
-                    </button>
-                  </div>
+                    </PipelineButton>
+                  </PipelineActions>
                 </div>
               </div>
 
-              <div className="crm-context-grid crm-context-grid-compact">
-                <div className="metric-card">
-                  <span>Contato</span>
-                  <strong>{selectedDetail.contact_name || "-"}</strong>
-                  <small>vínculo principal</small>
-                </div>
-                <div className="metric-card">
-                  <span>Empresa</span>
-                  <strong>{selectedDetail.company_name || "-"}</strong>
-                  <small>conta associada</small>
-                </div>
-                <div className="metric-card">
-                  <span>Origem</span>
-                  <strong>{selectedDetail.source || "-"}</strong>
-                  <small>canal capturado</small>
-                </div>
-                <div className="metric-card">
-                  <span>Eventos</span>
-                  <strong>{safeHistory.length}</strong>
-                  <small>mudanças registradas</small>
-                </div>
+              <div className="grid gap-3 md:grid-cols-4">
+                <PipelineMetricCard label="Contato" value={selectedDetail.contact_name || "-"} hint="vínculo principal" />
+                <PipelineMetricCard label="Empresa" value={selectedDetail.company_name || "-"} hint="conta associada" />
+                <PipelineMetricCard label="Origem" value={selectedDetail.source || "-"} hint="canal capturado" />
+                <PipelineMetricCard label="Eventos" value={safeHistory.length} hint="mudanças registradas" />
               </div>
 
-              <div className="detail-section detail-section-compact">
-                <div className="section-heading">
-                  <span className="eyebrow">Timeline</span>
-                  <h3>Histórico do lead</h3>
-                </div>
-                <ul className="history-list history-list-timeline">
+              <div className="space-y-3">
+                <PipelineSectionHeader eyebrow="Timeline" title="Histórico do lead" />
+                <div className="space-y-3">
                   {safeHistory.map((entry) => (
-                    <li key={entry.id}>
-                      <strong>{formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}</strong>
-                      <span>{entry.note || entry.changed_by_email || "-"}</span>
-                      <small>{formatDateTime(entry.changed_at)}</small>
-                    </li>
+                    <div key={entry.id} className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+                      <strong className="block font-heading text-sm text-slate-900">
+                        {formatLeadStatus(entry.from_status || "new")} → {formatLeadStatus(entry.to_status)}
+                      </strong>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{entry.note || entry.changed_by_email || "-"}</p>
+                      <small className="mt-2 block text-xs text-slate-500">{formatDateTime(entry.changed_at)}</small>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
+
               <ActivityPanel
                 contextLabel="Atividade do lead para qualificar, retomar ou avançar sem sair do painel."
                 emptyMessage="Nenhuma atividade registrada para este lead."
@@ -657,16 +733,17 @@ export function LeadsPage() {
                 onChanged={() => loadDetail(selectedDetail.id)}
                 title="Atividades do lead"
               />
-              </div>
-            ) : (
-              <div className="empty-state-panel">
-                <strong>Selecione um lead na fila</strong>
-                <p>O painel contextual mostra etapa, vínculo comercial e histórico antes de qualquer edição.</p>
-              </div>
-            )}
-          </div>
-        </aside>
-      </section>
+            </div>
+          ) : (
+            <PipelineEmpty>
+              <strong className="block font-heading text-sm font-semibold text-slate-900">
+                Selecione um lead na fila
+              </strong>
+              <span>O painel contextual mostra etapa, vínculo comercial e histórico antes de qualquer edição.</span>
+            </PipelineEmpty>
+          )}
+        </PipelineCard>
+      </div>
 
       <QuickFormModal
         description="Ajuste o lead sem quebrar o contexto da fila comercial."
@@ -674,89 +751,93 @@ export function LeadsPage() {
         open={isModalOpen}
         title={selectedId === null ? "Novo lead" : "Editar lead"}
       >
-        <form className="form-card" onSubmit={handleSubmit}>
-          {contactsLoading && <div className="empty-state-panel">Carregando contatos de apoio...</div>}
-          <div className="task-form-grid task-form-grid-2">
-            <label className="field">
-              <span>Contato</span>
-              <select value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          {contactsLoading && (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-4 text-sm text-slate-600">
+              Carregando contatos de apoio...
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <PipelineField label="Contato">
+              <PipelineSelect value={form.contact_id} onChange={(event) => setForm((current) => ({ ...current, contact_id: event.target.value }))}>
                 <option value="">Sem vínculo</option>
                 {safeContacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
                     {contact.full_name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Status</span>
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
+              </PipelineSelect>
+            </PipelineField>
+
+            <PipelineField label="Status">
+              <PipelineSelect value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
                 {LEAD_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {formatLeadStatus(status)}
                   </option>
                 ))}
-              </select>
-            </label>
+              </PipelineSelect>
+            </PipelineField>
           </div>
-          <label className="field">
-            <span>Título</span>
-            <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-          </label>
-          <div className="task-form-grid task-form-grid-2">
-            <label className="field">
-              <span>Origem</span>
-              <input value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
-            </label>
-            <label className="field">
-              <span>Descrição curta</span>
-              <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-            </label>
+
+          <PipelineField label="Título">
+            <PipelineInput value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+          </PipelineField>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <PipelineField label="Origem">
+              <PipelineInput value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+            </PipelineField>
+            <PipelineField label="Descrição curta">
+              <PipelineInput
+                value={form.description}
+                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+              />
+            </PipelineField>
           </div>
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
+
+          <PipelineActions>
+            <PipelineButton variant="primary" type="submit">
               {selectedId === null ? "Criar lead" : "Salvar ajustes"}
-            </button>
-            <button className="ghost-button" onClick={closeModal} type="button">
+            </PipelineButton>
+            <PipelineButton onClick={closeModal} variant="ghost" type="button">
               Cancelar
-            </button>
-          </div>
+            </PipelineButton>
+          </PipelineActions>
         </form>
       </QuickFormModal>
+
       <QuickFormModal
         description="Salve o recorte atual para recuperar filtros e agrupamento com um clique."
         onClose={() => setSavedViewDialogOpen(false)}
         open={savedViewDialogOpen}
         title={activeSavedView ? "Atualizar visão" : "Salvar visão"}
       >
-        <form className="form-card" onSubmit={handleSaveView}>
-          <label className="field">
-            <span>Nome da visão</span>
-            <input value={savedViewName} onChange={(event) => setSavedViewName(event.target.value)} />
-          </label>
-          <label className="field">
-            <span>Visão padrão</span>
-            <select value={savedViewDefault ? "yes" : "no"} onChange={(event) => setSavedViewDefault(event.target.value === "yes")}>
+        <form className="grid gap-4" onSubmit={handleSaveView}>
+          <PipelineField label="Nome da visão">
+            <PipelineInput value={savedViewName} onChange={(event) => setSavedViewName(event.target.value)} />
+          </PipelineField>
+
+          <PipelineField label="Visão padrão">
+            <PipelineSelect value={savedViewDefault ? "yes" : "no"} onChange={(event) => setSavedViewDefault(event.target.value === "yes")}>
               <option value="no">Não</option>
               <option value="yes">Sim</option>
-            </select>
-          </label>
-          <div className="form-actions">
-            <button className="primary-button button-with-icon" disabled={savedViewSubmitting} type="submit">
+            </PipelineSelect>
+          </PipelineField>
+
+          <PipelineActions>
+            <PipelineButton disabled={savedViewSubmitting} type="submit" variant="primary">
               <AppIcon name="check" />
               <span>{savedViewSubmitting ? "Salvando..." : "Salvar visão"}</span>
-            </button>
-            <button
-              className="ghost-button button-with-icon"
-              onClick={() => setSavedViewDialogOpen(false)}
-              type="button"
-            >
+            </PipelineButton>
+            <PipelineButton onClick={() => setSavedViewDialogOpen(false)} type="button" variant="ghost">
               <AppIcon name="close" />
               <span>Cancelar</span>
-            </button>
-          </div>
+            </PipelineButton>
+          </PipelineActions>
         </form>
       </QuickFormModal>
-    </PageShell>
+    </PipelinePageShell>
   );
 }
