@@ -180,10 +180,10 @@ export function AppShell({
         </aside>
 
         <main className="min-w-0 px-5 py-6 lg:px-6">
-          <header className="mb-5 rounded-[28px] border border-slate-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(240,245,250,0.94))] px-5 py-4 shadow-[0_18px_48px_rgba(17,32,49,0.08)]">
+          <header className="topbar mb-5 rounded-[28px] border border-slate-200/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(240,245,250,0.94))] px-5 py-4 shadow-[0_18px_48px_rgba(17,32,49,0.08)]">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="grid gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
+                <span className="topbar-kicker text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
                   Optus Hub{activeSection ? ` / ${activeSection.title}` : ""}
                 </span>
                 <h2 className="font-heading text-[clamp(1.8rem,3vw,2.6rem)] font-bold tracking-tight text-slate-950">
