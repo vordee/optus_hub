@@ -54,7 +54,7 @@ export function AppShell({
       </a>
 
       <div className={collapsed ? "grid min-h-screen grid-cols-[96px_minmax(0,1fr)]" : "grid min-h-screen grid-cols-[320px_minmax(0,1fr)]"}>
-        <aside className="flex min-h-screen flex-col gap-5 border-r border-slate-200/80 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.995),rgba(8,16,31,0.99))] px-5 py-5 text-slate-50 shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
+        <aside className="sidebar flex min-h-screen flex-col gap-5 border-r border-slate-200/80 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.995),rgba(8,16,31,0.99))] px-5 py-5 text-slate-50 shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
           <div className="flex items-start justify-between gap-4">
             <div className={collapsed ? "grid w-full justify-items-center gap-3" : "grid gap-3"}>
               <div className="rounded-2xl bg-white px-4 py-3 shadow-[0_16px_34px_rgba(0,0,0,0.18)]">
@@ -102,7 +102,7 @@ export function AppShell({
               <div key={section.title} className="grid gap-2">
                 {!collapsed && (
                   <div className="grid gap-1">
-                    <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                    <span className="nav-group-title text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
                       {section.title}
                     </span>
                     <span className="text-sm leading-6 text-slate-300">{section.summary}</span>
